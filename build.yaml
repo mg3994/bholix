@@ -1,0 +1,46 @@
+targets:
+  $default:
+    sources:
+      - lib/**
+      - web/**
+      - tools/**
+      - $package$
+      - lib/$lib$
+      - pubspec.yaml
+      - "!build/**"
+      - "!**/build/**"
+      - "!**/generated/**"
+    builders:
+      drift_dev:
+        options:
+          databases:
+            default: lib/src/storage/drift/app_database.dart
+          sql:
+            dialect: sqlite
+            options:
+              version: "3.38"
+              modules:
+                - fts5
+      build_web_compilers:entrypoint:
+        generate_for:
+          - tools/drift_worker.dart
+        options:
+          compiler: dart2js
+        dev_options:
+          dart2js_args:
+            - --no-minify
+        release_options:
+          dart2js_args:
+            - -O4
+      ":copy_compiled_worker_js":
+        enabled: true
+
+builders:
+  copy_compiled_worker_js:
+    import: "tools/builder.dart"
+    builder_factories: ["CopyCompiledJs.new"]
+    required_inputs:
+      - .js
+    build_to: source
+    build_extensions:
+      "tools/drift_worker.dart": ["web/drift_worker.js"]

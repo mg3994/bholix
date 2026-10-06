@@ -1,0 +1,21 @@
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
+include:
+  - package:flutter_lints/flutter.yaml
+  - package:kaisel_lint/recommended.yaml
+
+plugins:
+  kaisel_lint:
+    version: ^0.5.1
+    diagnostics:
+      prefer_const_route_constructors: true
+      prefer_pattern_match_over_is_check: true
+      unused_guard_redirect: true
+      prefer_push_or_replace_top_in_adaptive: false
