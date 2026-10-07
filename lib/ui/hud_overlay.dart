@@ -200,37 +200,35 @@ class HudOverlay extends StatelessWidget {
           ),
         ),
 
-        // ── Joystick & Controls — bottom overlay (visible ONLY when playing) ──
-        Positioned.fill(
+        // ── Joystick — bottom left ────────────────────────────────────────
+        Positioned(
+          bottom: padding.bottom + 24.0,
+          left: 24.0,
+          child: BlocSignalSelector<GameCubit, GameStateRecord, bool>(
+            bloc: gameCubit,
+            selector: (s) => s.isPlaying,
+            builder: (_, isPlaying) => isPlaying
+                ? JoystickWidget(direction: joystickDirection, size: 130.0)
+                : const SizedBox.shrink(),
+          ),
+        ),
+
+        // ── Fire button — bottom right ────────────────────────────────────
+        Positioned(
+          bottom: padding.bottom + 32.0,
+          right: 32.0,
           child: BlocSignalSelector<GameCubit, GameStateRecord, bool>(
             bloc: gameCubit,
             selector: (s) => s.isPlaying,
             builder: (_, isPlaying) {
               if (!isPlaying) return const SizedBox.shrink();
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  Positioned(
-                    bottom: padding.bottom + 24.0,
-                    left: 24.0,
-                    child: JoystickWidget(
-                      direction: joystickDirection,
-                      size: 130.0,
-                    ),
-                  ),
-                  Positioned(
-                    bottom: padding.bottom + 32.0,
-                    right: 32.0,
-                    child: ValueListenableBuilder<bool>(
-                      valueListenable: firePressed,
-                      builder: (context, pressed, child) => _FireButton(
-                        pressed: pressed,
-                        onTapDown: () => firePressed.value = true,
-                        onRelease: () => firePressed.value = false,
-                      ),
-                    ),
-                  ),
-                ],
+              return ValueListenableBuilder<bool>(
+                valueListenable: firePressed,
+                builder: (context, pressed, child) => _FireButton(
+                  pressed: pressed,
+                  onTapDown: () => firePressed.value = true,
+                  onRelease: () => firePressed.value = false,
+                ),
               );
             },
           ),

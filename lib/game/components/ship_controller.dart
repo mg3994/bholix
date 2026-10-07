@@ -56,9 +56,6 @@ class ShipController extends Component {
   /// Unit vector pointing in the direction the ship faces (+Z rotated by yaw).
   vm.Vector3 get forward => vm.Vector3(math.sin(_yaw), 0.0, math.cos(_yaw));
 
-  /// World position of the ship node.
-  vm.Vector3 get worldPosition => node.globalTransform.getTranslation();
-
   /// Resets controller state — called on game restart.
   void reset() {
     velocity = vm.Vector3.zero();

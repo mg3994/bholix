@@ -27,8 +27,8 @@ class AsteroidField {
   int get aliveCount => asteroids.where((a) => a.alive).length;
 
   void init(Scene scene) {
-    // Detailed crystalline Icosphere geometry
-    final geo = IcosphereGeometry(radius: 1.0, subdivisions: 3);
+    // Balanced crystalline Icosphere geometry (subdivisions 2 for optimal vertex count & high FPS)
+    final geo = IcosphereGeometry(radius: 1.0, subdivisions: 2);
 
     // Metallic space mineral material with subtle emissive shimmer
     final mat = PhysicallyBasedMaterial()
