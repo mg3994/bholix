@@ -22,14 +22,14 @@ class BulletPool {
   void init(Scene scene) {
     // Capsule elongated along Z — visually a tracer bolt
     final geo = CapsuleGeometry(
-      radius: _bulletRadiusXY,
-      height: _bulletLengthZ,
+      radius: _bulletRadiusXY * 1.2,
+      height: _bulletLengthZ * 1.5,
     );
 
     final mat = PhysicallyBasedMaterial()
-      ..baseColorFactor = vm.Vector4(0.0, 0.9, 1.0, 1.0)
-      ..emissiveFactor = vm.Vector4(0.0, 0.8, 1.0, 1.0)
-      ..emissiveStrength = 14.0
+      ..baseColorFactor = vm.Vector4(0.0, 1.0, 0.9, 1.0)
+      ..emissiveFactor = vm.Vector4(0.0, 1.0, 0.9, 1.0)
+      ..emissiveStrength = 28.0
       ..roughnessFactor = 0.0
       ..metallicFactor = 0.0;
 

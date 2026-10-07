@@ -27,15 +27,16 @@ class AsteroidField {
   int get aliveCount => asteroids.where((a) => a.alive).length;
 
   void init(Scene scene) {
-    // Single shared geometry — all asteroids same shape, different scale
-    final geo = IcosphereGeometry(radius: 1.0, subdivisions: 2);
+    // Detailed crystalline Icosphere geometry
+    final geo = IcosphereGeometry(radius: 1.0, subdivisions: 3);
 
-    // Use one material on the InstancedMesh but apply per-instance color
-    // via addInstance's optional color parameter to differentiate size tiers.
+    // Metallic space mineral material with subtle emissive shimmer
     final mat = PhysicallyBasedMaterial()
-      ..baseColorFactor = vm.Vector4(0.38, 0.32, 0.28, 1.0)
-      ..roughnessFactor = 0.92
-      ..metallicFactor = 0.08;
+      ..baseColorFactor = vm.Vector4(0.4, 0.42, 0.5, 1.0)
+      ..roughnessFactor = 0.55
+      ..metallicFactor = 0.75
+      ..emissiveFactor = vm.Vector4(0.0, 0.4, 0.8, 1.0)
+      ..emissiveStrength = 1.8;
 
     _mesh = InstancedMesh(geometry: geo, material: mat, cullInstances: false);
 
@@ -175,9 +176,9 @@ class AsteroidField {
   }
 
   vm.Vector4 _colorForRadius(double r) {
-    if (r > 4.0) return vm.Vector4(0.55, 0.50, 0.45, 1.0); // large: warm grey
-    if (r > 2.5) return vm.Vector4(0.65, 0.45, 0.32, 1.0); // medium: brown
-    return vm.Vector4(0.80, 0.72, 0.60, 1.0); // small: bright
+    if (r > 4.0) return vm.Vector4(0.55, 0.60, 0.75, 1.0); // large: deep blue metallic
+    if (r > 2.5) return vm.Vector4(0.80, 0.45, 0.25, 1.0); // medium: amber-copper core
+    return vm.Vector4(0.00, 0.90, 1.00, 1.0); // small: intense cyan crystal
   }
 
   void update(double dt) {

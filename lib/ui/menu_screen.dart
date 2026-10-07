@@ -13,67 +13,129 @@ class MenuScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFF030712),
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // ── Starfield background — simple CustomPaint ──────────────────
+          // Dynamic starfield
           const _StarfieldBackground(),
 
-          // ── Menu content ───────────────────────────────────────────────
+          // Sci-fi grid vignette glow
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment.center,
+                radius: 1.1,
+                colors: [
+                  Colors.transparent,
+                  Colors.cyanAccent.withValues(alpha: 0.05),
+                  Colors.black.withValues(alpha: 0.85),
+                ],
+              ),
+            ),
+          ),
+
           SafeArea(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Spacer(flex: 2),
 
-                // Title
-                const Text(
+                // Glowing Badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20.0),
+                    color: Colors.cyanAccent.withValues(alpha: 0.12),
+                    border: Border.all(color: Colors.cyanAccent.withValues(alpha: 0.4)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.cyanAccent,
+                          boxShadow: [
+                            BoxShadow(color: Colors.cyanAccent, blurRadius: 6),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'FLUTTER SCENE 3D ENGINE',
+                        style: TextStyle(
+                          color: Colors.cyanAccent,
+                          fontSize: 10.0,
+                          letterSpacing: 3.0,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20.0),
+
+                // Main Title with glow
+                Text(
                   'ASTEROID\nMINER',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 48.0,
-                    fontWeight: FontWeight.w100,
-                    letterSpacing: 12.0,
-                    height: 1.15,
+                    fontSize: 52.0,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 10.0,
+                    height: 1.05,
+                    shadows: [
+                      BoxShadow(
+                        color: Colors.cyanAccent.withValues(alpha: 0.8),
+                        blurRadius: 24,
+                      ),
+                    ],
                   ),
                 ),
 
-                const SizedBox(height: 8.0),
+                const SizedBox(height: 12.0),
 
-                // Subtitle
                 Text(
-                  'flutter_scene',
+                  'DEEP SPACE SURVIVAL COMMAND',
                   style: TextStyle(
-                    color: Colors.cyanAccent.withValues(alpha: 0.6),
+                    color: Colors.white.withValues(alpha: 0.5),
                     fontSize: 11.0,
                     letterSpacing: 6.0,
-                    fontWeight: FontWeight.w300,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
 
                 const Spacer(flex: 3),
 
-                // Play button
+                // Launch Card / Button
                 _MenuButton(
-                  label: 'LAUNCH',
+                  label: 'ENTER COMBAT ZONE',
                   onTap: () => context.push(const PlayingRoute()),
                 ),
 
-                const SizedBox(height: 20.0),
+                const SizedBox(height: 28.0),
 
-                // How-to-play hint
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 40.0),
+                // Controls hint panel
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(12.0),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  ),
                   child: Text(
-                    'JOYSTICK  ·  AIM & THRUST\nFIRE BUTTON  ·  SHOOT',
+                    'JOYSTICK / WASD  ·  FLIGHT CONTROL\nFIRE BUTTON / SPACE  ·  PLASMA CANNON',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.28),
+                      color: Colors.cyanAccent.withValues(alpha: 0.7),
                       fontSize: 10.0,
-                      letterSpacing: 3.0,
-                      height: 2.0,
+                      letterSpacing: 2.5,
+                      height: 1.8,
                     ),
                   ),
                 ),
