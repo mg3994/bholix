@@ -18,6 +18,7 @@ dependencies:
   intl: ^0.20.3
   kaisel: ^1.1.0
   path_provider: ^2.1.6
+  vector_math: ^2.1.4
 
 dev_dependencies:
   flutter_test:

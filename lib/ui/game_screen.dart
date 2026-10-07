@@ -29,8 +29,9 @@ class _GameScreenState extends State<GameScreen> {
 
   // Input notifiers — owned here so the HUD widgets can bind to them,
   // and we can read them synchronously in onTick without setState.
-  final ValueNotifier<vm.Vector2> _joystickDir =
-      ValueNotifier(vm.Vector2.zero());
+  final ValueNotifier<vm.Vector2> _joystickDir = ValueNotifier(
+    vm.Vector2.zero(),
+  );
   final ValueNotifier<bool> _firePressed = ValueNotifier(false);
 
   @override
@@ -65,10 +66,7 @@ class _GameScreenState extends State<GameScreen> {
         children: [
           // ── 3D scene ────────────────────────────────────────────────────
           // No camera: — the CameraComponent inside the scene is active.
-          SceneView(
-            _game.scene,
-            onTick: _onTick,
-          ),
+          SceneView(_game.scene, onTick: _onTick),
 
           // ── HUD + game-over overlay ──────────────────────────────────────
           ValueListenableBuilder<GameState>(
@@ -145,7 +143,7 @@ class _GameOverOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.black.withOpacity(0.72),
+      color: Colors.black.withValues(alpha: 0.72),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,

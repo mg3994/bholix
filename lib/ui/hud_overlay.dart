@@ -70,10 +70,7 @@ class HudOverlay extends StatelessWidget {
         Positioned(
           bottom: padding.bottom + 24.0,
           left: 24.0,
-          child: JoystickWidget(
-            direction: joystickDirection,
-            size: 130.0,
-          ),
+          child: JoystickWidget(direction: joystickDirection, size: 130.0),
         ),
 
         // ── Fire button — bottom right ───────────────────────────────────
@@ -82,7 +79,7 @@ class HudOverlay extends StatelessWidget {
           right: 32.0,
           child: ValueListenableBuilder<bool>(
             valueListenable: firePressed,
-            builder: (_, pressed, __) => GestureDetector(
+            builder: (_, pressed, _) => GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTapDown: (_) => firePressed.value = true,
               onTapUp: (_) => firePressed.value = false,
@@ -92,10 +89,11 @@ class HudOverlay extends StatelessWidget {
                 height: 76.0,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.cyanAccent
-                      .withOpacity(pressed ? 0.30 : 0.12),
+                  color: Colors.cyanAccent.withValues(
+                    alpha: pressed ? 0.30 : 0.12,
+                  ),
                   border: Border.all(
-                    color: Colors.cyanAccent.withOpacity(0.7),
+                    color: Colors.cyanAccent.withValues(alpha: 0.7),
                     width: 2.0,
                   ),
                 ),

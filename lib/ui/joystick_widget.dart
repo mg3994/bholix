@@ -10,11 +10,7 @@ class JoystickWidget extends StatefulWidget {
   final ValueNotifier<vm.Vector2> direction;
   final double size;
 
-  const JoystickWidget({
-    super.key,
-    required this.direction,
-    this.size = 130.0,
-  });
+  const JoystickWidget({super.key, required this.direction, this.size = 130.0});
 
   @override
   State<JoystickWidget> createState() => _JoystickWidgetState();
@@ -64,10 +60,7 @@ class _JoystickWidgetState extends State<JoystickWidget> {
         width: s,
         height: s,
         child: CustomPaint(
-          painter: _JoystickPainter(
-            thumbOffset: _thumbOffset,
-            active: _active,
-          ),
+          painter: _JoystickPainter(thumbOffset: _thumbOffset, active: _active),
         ),
       ),
     );
@@ -91,7 +84,7 @@ class _JoystickPainter extends CustomPainter {
       center,
       baseRadius,
       Paint()
-        ..color = Colors.cyanAccent.withOpacity(0.12)
+        ..color = Colors.cyanAccent.withValues(alpha: 0.12)
         ..style = PaintingStyle.fill,
     );
     // Outer ring stroke
@@ -99,7 +92,7 @@ class _JoystickPainter extends CustomPainter {
       center,
       baseRadius,
       Paint()
-        ..color = Colors.cyanAccent.withOpacity(0.45)
+        ..color = Colors.cyanAccent.withValues(alpha: 0.45)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5,
     );
@@ -109,7 +102,7 @@ class _JoystickPainter extends CustomPainter {
       center + thumbOffset,
       thumbRadius,
       Paint()
-        ..color = Colors.cyanAccent.withOpacity(active ? 0.80 : 0.45)
+        ..color = Colors.cyanAccent.withValues(alpha: active ? 0.80 : 0.45)
         ..style = PaintingStyle.fill,
     );
   }

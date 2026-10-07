@@ -36,7 +36,7 @@ class CollisionSystem extends SceneTickListener {
   });
 
   @override
-  void beforeTick(double dt) {
+  void beforeTick(double deltaSeconds) {
     if (getState().phase != GamePhase.playing) return;
 
     _checkBulletVsAsteroid();
