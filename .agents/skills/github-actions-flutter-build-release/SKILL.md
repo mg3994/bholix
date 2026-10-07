@@ -39,14 +39,21 @@ Always use the latest major version tags. Do **not** invent version numbers — 
 ### Manual dispatch inputs
 - **`build_target`**: `apk` · `appbundle` · `ipa` · `web` · `linux` · `windows` · `macos` · `all`
 - **`flutter_channel`**: `stable` · `beta` · `master`
-- **`web_renderer`**: `canvaskit` · `html` · `skwasm` · `auto`  (only affects web builds)
+- **`web_renderer`**: `canvaskit` · `skwasm`  (only affects web builds)
+
+> [!NOTE]
+> `html` and `auto` were removed in Flutter 3.29. Only two renderers remain: CanvasKit (default) and SkWasm.
 
 ### Runner selection
 | Target | Runner | Reason |
 |---|---|---|
 | `apk`, `appbundle`, `ipa`, `web`, `macos` | `macos-latest` | Default; required for iOS/macOS codesign toolchain |
-| `linux` | `ubuntu-latest` | GTK toolchain not available on macOS runners |
+| `linux` | `ubuntu-24.04` | GTK toolchain not available on macOS runners |
 | `windows` | `windows-latest` | MSVC toolchain required |
+| `resolve`, `deploy-pages` | `ubuntu-24.04` | Lightweight jobs; pinned to avoid `ubuntu-latest` migration surprises |
+
+> [!NOTE]
+> Do not use `ubuntu-latest` — as of October 2026 it is migrating to Ubuntu 26, which may introduce breaking changes in GTK/system library versions for Flutter Linux builds. Always pin to an explicit version (`ubuntu-24.04`) so migrations are opt-in.
 
 ### Release & deploy rules
 - Artifacts uploaded for **every run** on **every branch**, 30-day retention.
@@ -67,7 +74,7 @@ env:
 ```
 
 - `FLUTTER_CHANNEL` controls the default for automated triggers (push, PR). The manual dispatch `flutter_channel` input overrides it.
-- `WEB_RENDERER` controls the default web renderer for push/PR web builds. The manual dispatch `web_renderer` input overrides it. Valid values: `canvaskit` (default, pixel-perfect), `html` (smaller bundle), `skwasm` (multi-threaded Wasm, best performance), `auto` (Flutter picks based on browser).
+- `WEB_RENDERER` controls the default web renderer for push/PR web builds. The manual dispatch `web_renderer` input overrides it. Valid values: `canvaskit` (default, no extra CLI flag) and `skwasm` (passes `--wasm`). **`html` and `auto` were removed in Flutter 3.29** — never use them.
 - `FLUTTER_VERSION` is forwarded to `subosito/flutter-action`. Leave empty to track the latest on the chosen channel, or pin to lock the SDK.
 - `JAVA_DISTRIBUTION` must be `temurin`. Never use `zulu` or `adopt` (both deprecated).
 
@@ -117,18 +124,27 @@ concurrency:
 Cancels queued runs on the same branch when a newer push arrives, saving runner minutes.
 
 ### Web renderer
-```yaml
-flutter build web --release --web-renderer ${{ needs.resolve.outputs.web_renderer }}
-```
-The renderer is resolved from the `web_renderer` dispatch input (default `canvaskit`) or `env.WEB_RENDERER` for push/PR triggers. Never hardcode the renderer string in the build step — always read it from the `resolve` output.
+`--web-renderer` **was removed in Flutter 3.29**. The build step now uses a conditional:
 
-**Renderer guide:**
-| Renderer | Best for |
-|---|---|
-| `canvaskit` | Pixel-perfect fidelity matching native, moderate bundle size (~1.5 MB) |
-| `skwasm` | Best runtime performance via multi-threaded WebAssembly (requires SharedArrayBuffer / COOP+COEP headers) |
-| `html` | Smallest bundle, uses browser DOM — lower fidelity, good for content-heavy apps |
-| `auto` | Flutter picks `canvaskit` or `html` based on browser capabilities at runtime |
+```yaml
+- name: Build Web (release)
+  run: |
+    RENDERER="${{ needs.resolve.outputs.web_renderer }}"
+    if [ "$RENDERER" = "skwasm" ]; then
+      flutter build web --release --wasm
+    else
+      flutter build web --release
+    fi
+```
+
+Only two renderers remain:
+
+| Renderer | CLI flag | Best for |
+|---|---|---|
+| `canvaskit` | *(none — default)* | Pixel-perfect fidelity matching native, ~1.5 MB download |
+| `skwasm` | `--wasm` | Best runtime performance via multi-threaded WebAssembly (requires `SharedArrayBuffer` / COOP+COEP headers on the server) |
+
+`html` and `auto` were removed in Flutter 3.29 and must never be used.
 
 ### IPA without code signing
 ```yaml

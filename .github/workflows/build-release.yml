@@ -37,9 +37,7 @@ on:
         type: choice
         options:
           - canvaskit
-          - html
           - skwasm
-          - auto
 
 # Cancel any in-progress run on the same ref so fast pushes don't queue up
 concurrency:
@@ -52,7 +50,8 @@ env:
   FLUTTER_CHANNEL: "stable"    # Default channel for push / PR triggers.
                                # Manual dispatch overrides this via the input dropdown.
   WEB_RENDERER: "canvaskit"    # Default web renderer for push / PR triggers.
-                               # Options: canvaskit | html | skwasm | auto
+                               # Options: canvaskit (default, no extra flag) | skwasm (passes --wasm)
+                               # html and auto were removed in Flutter 3.29.
                                # Manual dispatch overrides this via the input dropdown.
   JAVA_VERSION: "17"
   JAVA_DISTRIBUTION: "temurin"
@@ -63,7 +62,7 @@ env:
 jobs:
   resolve:
     name: Resolve inputs
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       target:        ${{ steps.pick.outputs.target }}
       channel:       ${{ steps.pick.outputs.channel }}
@@ -272,7 +271,13 @@ jobs:
         run: dart run build_runner build --release --delete-conflicting-outputs
 
       - name: Build Web (release)
-        run: flutter build web --release --web-renderer ${{ needs.resolve.outputs.web_renderer }}
+        run: |
+          RENDERER="${{ needs.resolve.outputs.web_renderer }}"
+          if [ "$RENDERER" = "skwasm" ]; then
+            flutter build web --release --wasm
+          else
+            flutter build web --release
+          fi
 
       - name: Upload Web artifact
         uses: actions/upload-artifact@v7
@@ -287,7 +292,7 @@ jobs:
     if: |
       needs.build-web.result == 'success' &&
       (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       pages: write
       id-token: write
@@ -320,7 +325,7 @@ jobs:
     name: Build Linux
     needs: resolve
     if: needs.resolve.outputs.run_linux == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v7
