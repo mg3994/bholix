@@ -44,12 +44,21 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Minimal read permissions by default; jobs that write (releases, pages) declare their own
+permissions:
+  contents: write       # required by softprops/action-gh-release to create releases & tags
+  pages: write          # required by actions/deploy-pages
+  id-token: write       # required by actions/deploy-pages (OIDC)
+
 env:
   FLUTTER_VERSION: ""          # Leave empty to use the latest on the selected channel.
                                # Pin to e.g. "3.32.0" for fully reproducible builds.
-  FLUTTER_CHANNEL: "beta"    # Default channel for push / PR triggers.
+  BUILD_TARGET: "web"          # Default build target for push / PR triggers.
+                               # ⚠ Must match the dispatch input default: above.
+                               # Options: apk | appbundle | ipa | web | linux | windows | macos | all
+  FLUTTER_CHANNEL: "beta"      # Default channel for push / PR triggers.
                                # Manual dispatch overrides this via the input dropdown.
-  WEB_RENDERER: "skwasm"    # Default web renderer for push / PR triggers.
+  WEB_RENDERER: "skwasm"       # Default web renderer for push / PR triggers.
                                # Options: canvaskit (default, no extra flag) | skwasm (passes --wasm)
                                # html and auto were removed in Flutter 3.29.
                                # Manual dispatch overrides this via the input dropdown.
@@ -83,8 +92,8 @@ jobs:
           CHANNEL="${{ github.event.inputs.flutter_channel }}"
           RENDERER="${{ github.event.inputs.web_renderer }}"
 
-          # Defaults for push / PR (no manual inputs)
-          [ -z "$TARGET"   ] && TARGET="apk"
+          # Defaults for push / PR (no manual inputs) — fall back to env vars
+          [ -z "$TARGET"   ] && TARGET="${{ env.BUILD_TARGET }}"
           [ -z "$CHANNEL"  ] && CHANNEL="${{ env.FLUTTER_CHANNEL }}"
           [ -z "$RENDERER" ] && RENDERER="${{ env.WEB_RENDERER }}"
 

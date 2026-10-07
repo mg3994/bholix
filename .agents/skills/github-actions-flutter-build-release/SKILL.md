@@ -189,6 +189,16 @@ These are required on the `deploy-pages` job. Without `id-token: write`, OIDC to
 1. **Enable GitHub Pages**: Settings → Pages → Source → **GitHub Actions**
 2. **Workflow permissions**: Settings → Actions → General → Workflow permissions → **Read and write permissions** (required by `softprops/action-gh-release` to create releases and tags)
 
+> [!NOTE]
+> The workflow also declares explicit `permissions` at the top level so the `GITHUB_TOKEN` is granted the right scopes regardless of the repository's default setting:
+> ```yaml
+> permissions:
+>   contents: write   # softprops/action-gh-release — create releases & tags
+>   pages: write      # actions/deploy-pages
+>   id-token: write   # actions/deploy-pages OIDC token
+> ```
+> Without `contents: write` the release step fails with HTTP 403. The `deploy-pages` job also keeps its own `permissions` block (job-level overrides are still valid and harmless alongside the workflow-level grant).
+
 ---
 
 ## Extending the Workflow
