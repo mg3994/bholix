@@ -185,7 +185,7 @@ class _MenuButtonState extends State<_MenuButton>
       onTap: widget.onTap,
       child: AnimatedBuilder(
         animation: _pulse,
-        builder: (_, _) => Container(
+        builder: (context, child) => Container(
           padding: const EdgeInsets.symmetric(horizontal: 48.0, vertical: 16.0),
           decoration: BoxDecoration(
             border: Border.all(

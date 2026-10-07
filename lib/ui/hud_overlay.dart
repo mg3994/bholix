@@ -223,7 +223,7 @@ class HudOverlay extends StatelessWidget {
                     right: 32.0,
                     child: ValueListenableBuilder<bool>(
                       valueListenable: firePressed,
-                      builder: (_, pressed, _) => _FireButton(
+                      builder: (context, pressed, child) => _FireButton(
                         pressed: pressed,
                         onTapDown: () => firePressed.value = true,
                         onRelease: () => firePressed.value = false,
