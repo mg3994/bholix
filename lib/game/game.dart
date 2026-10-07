@@ -9,6 +9,7 @@ import 'bullet_pool.dart';
 import 'components/ship_controller.dart';
 import 'components/collision_system.dart';
 import 'models/game_state.dart';
+import 'space_dust.dart';
 
 /// Owns the [Scene], sub-systems, and per-frame tick.
 ///
@@ -24,6 +25,7 @@ class Game {
   // ── sub-systems ────────────────────────────────────────────────────────────
   final AsteroidField _asteroidField = AsteroidField();
   final BulletPool _bulletPool = BulletPool();
+  final SpaceDustField _spaceDust = SpaceDustField();
 
   // ── scene nodes ─── (declared at class level, initialised in _buildShip) ──
   late final Node _shipNode;
@@ -63,6 +65,7 @@ class Game {
     _setupCamera();
     _asteroidField.init(scene);
     _bulletPool.init(scene);
+    _spaceDust.init(scene);
     _registerCollisionSystem();
     _applyPlatformQuality();
 
@@ -101,6 +104,7 @@ class Game {
 
     _asteroidField.update(dt);
     _bulletPool.update(dt);
+    _spaceDust.update(_shipController.worldPosition);
 
     // ── invincibility flash ────────────────────────────────────────────────
     _updateInvincibilityFlash(dt, state);
@@ -176,44 +180,34 @@ class Game {
     scene.directionalLight = DirectionalLight(
       direction: (vm.Vector3(-0.5, -0.6, 0.6)..normalize()),
       color: vm.Vector3(0.7, 0.85, 1.0), // Deep blue-cyan cosmic star light
-      intensity: 3.5,
+      intensity: 3.0,
       castsShadow: true,
-      shadowMaxDistance: 100.0,
-      shadowMapResolution: 1024,
+      shadowMaxDistance: 80.0,
+      shadowMapResolution: 512, // Reduced from 1024 to 512 for high FPS
     );
 
+    // Optimized EnvironmentSettings to eliminate frame drops across web/desktop/mobile
     scene.environmentSettings = EnvironmentSettings(
       toneMapping: ToneMappingMode.aces,
       exposure: 1.0,
-      colorGradingEnabled: true,
-      contrast: 1.25,
-      saturation: 1.1,
-      temperature: -0.2,
+      colorGradingEnabled: false,
       fogEnabled: true,
       fogMode: FogMode.exponential,
       fogColor: vm.Vector3(0.01, 0.02, 0.06),
       fogDensity: 0.005,
-      ambientOcclusionEnabled: true,
-      ambientOcclusionMethod: AmbientOcclusionMethod.groundTruth,
-      ambientOcclusionHalfResolution: true,
-      ambientOcclusionIntensity: 1.2,
+      ambientOcclusionEnabled: false, // Disabling GTAO pass eliminates heavy GPU overhead
       vignetteEnabled: true,
-      vignetteIntensity: 0.6,
+      vignetteIntensity: 0.5,
       vignetteRadius: 0.6,
       bloomEnabled: true,
-      bloomThreshold: 0.65,
-      bloomIntensity: 0.85,
-      bloomScatter: 0.8,
-      lensFlareEnabled: true,
-      lensFlareIntensity: 0.9,
-      filmGrainEnabled: true,
-      filmGrainIntensity: 0.12,
+      bloomThreshold: 0.7,
+      bloomIntensity: 0.5,
+      bloomScatter: 0.7,
+      lensFlareEnabled: false,
+      filmGrainEnabled: false,
       chromaticAberrationEnabled: true,
-      chromaticAberrationIntensity: 0.12,
-      godRaysEnabled: true,
-      godRaysIntensity: 0.9,
-      godRaysDensity: 0.6,
-      godRaysColor: vm.Vector3(0.2, 0.8, 1.0),
+      chromaticAberrationIntensity: 0.06,
+      godRaysEnabled: false, // Disabling god rays pass prevents frame drops
     );
   }
 
