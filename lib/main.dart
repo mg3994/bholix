@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart' show PlatformDispatcher;
 import 'package:flutter/material.dart';
 
 import 'core/errors/reporter_impl.dart' show BootstrapErrorReporter;
-import 'ui/game_screen.dart';
+import 'routing/app_router.dart';
 
 void main() {
   const errors = BootstrapErrorReporter.active();
@@ -32,9 +32,18 @@ class BootStrap extends StatefulWidget {
 class _BootStrapState extends State<BootStrap> {
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    // MaterialApp.router — kaisel supplies the RouterConfig.
+    // No string-path routes, no codegen, fully typed sealed-class stack.
+    return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      home: GameScreen(),
+      routerConfig: appRouterConfig,
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: Colors.black,
+        colorScheme: const ColorScheme.dark(
+          primary: Colors.cyanAccent,
+          secondary: Colors.cyanAccent,
+        ),
+      ),
     );
   }
 }

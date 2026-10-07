@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
-// ignore: depend_on_referenced_packages
+import 'package:bloc_signals_flutter/bloc_signals_flutter.dart';
+import 'package:kaisel/kaisel.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 import 'package:flutter_scene/scene.dart';
 
 import '../game/game.dart';
 import '../game/models/game_state.dart';
+import '../routing/app_router.dart';
 import 'hud_overlay.dart';
 
 /// Thin widget layer over [Game].
 ///
-/// Responsibilities:
-/// - Creates [Game] and awaits [Game.load].
-/// - Forwards joystick / fire input into [Game] before every tick.
-/// - Renders [SceneView] with no [camera:] — the [CameraComponent] inside
-///   the scene is already active (set by [CameraComponent.activateOnMount]).
-/// - Stacks the HUD over the scene.
-/// - Shows a loading screen while the scene initialises.
+/// - Creates [Game], awaits [Game.load].
+/// - Forwards joystick + fire input synchronously each tick via [onTick].
+/// - Renders [SceneView] with no [camera:] — [CameraComponent] is active.
+/// - Stacks [HudOverlay] (BlocSignalSelector-driven) over the scene.
+/// - Listens for [GamePhase.gameOver] via [BlocSignalListener] and navigates
+///   to [GameOverRoute] via kaisel — navigation is a side-effect, not a rebuild.
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
 
@@ -27,8 +28,6 @@ class _GameScreenState extends State<GameScreen> {
   final Game _game = Game();
   bool _ready = false;
 
-  // Input notifiers — owned here so the HUD widgets can bind to them,
-  // and we can read them synchronously in onTick without setState.
   final ValueNotifier<vm.Vector2> _joystickDir = ValueNotifier(
     vm.Vector2.zero(),
   );
@@ -46,11 +45,11 @@ class _GameScreenState extends State<GameScreen> {
   void dispose() {
     _joystickDir.dispose();
     _firePressed.dispose();
+    _game.dispose();
     super.dispose();
   }
 
-  void _onTick(Duration elapsed, double dt) {
-    // Push input into the game every frame before the scene ticks.
+  void _onTick(Duration _, double dt) {
     _game.setShipInput(_joystickDir.value);
     _game.setFiring(_firePressed.value);
     _game.tick(dt);
@@ -58,43 +57,32 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_ready) return _LoadingScreen();
+    if (!_ready) return const _LoadingScreen();
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // ── 3D scene ────────────────────────────────────────────────────
-          // No camera: — the CameraComponent inside the scene is active.
-          SceneView(_game.scene, onTick: _onTick),
+    // BlocSignalListener — side-effect only (navigation), zero rebuilds.
+    // Listens for game-over and navigates with the final score as a typed
+    // route parameter. kaisel pushOrReplaceTop avoids stacking game screens.
+    return BlocSignalListener<GameCubit, GameStateRecord>(
+      bloc: _game.gameCubit,
+      listenWhen: (prev, curr) => prev.phase != curr.phase && curr.isGameOver,
+      listener: (context, state) {
+        context.pushOrReplaceTop(GameOverRoute(finalScore: state.score));
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(
+          children: [
+            // 3D scene — no camera: arg, CameraComponent is active
+            SceneView(_game.scene, onTick: _onTick),
 
-          // ── HUD + game-over overlay ──────────────────────────────────────
-          ValueListenableBuilder<GameState>(
-            valueListenable: _game.state,
-            builder: (context, gameState, _) {
-              return Stack(
-                children: [
-                  // HUD always visible while playing
-                  if (gameState.phase == GamePhase.playing)
-                    HudOverlay(
-                      gameState: gameState,
-                      joystickDirection: _joystickDir,
-                      firePressed: _firePressed,
-                    ),
-
-                  // Game-over overlay
-                  if (gameState.phase == GamePhase.gameOver)
-                    _GameOverOverlay(
-                      score: gameState.score,
-                      onRestart: () {
-                        _game.reset();
-                      },
-                    ),
-                ],
-              );
-            },
-          ),
-        ],
+            // HUD — BlocSignalSelector inside, surgical per-widget rebuilds
+            HudOverlay(
+              gameCubit: _game.gameCubit,
+              joystickDirection: _joystickDir,
+              firePressed: _firePressed,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -103,6 +91,8 @@ class _GameScreenState extends State<GameScreen> {
 // ── Loading screen ────────────────────────────────────────────────────────────
 
 class _LoadingScreen extends StatelessWidget {
+  const _LoadingScreen();
+
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
@@ -120,69 +110,10 @@ class _LoadingScreen extends StatelessWidget {
               'INITIALISING ENGINES',
               style: TextStyle(
                 color: Colors.cyanAccent,
-                fontSize: 12.0,
+                fontSize: 11.0,
                 letterSpacing: 5.0,
                 fontWeight: FontWeight.w300,
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Game-over overlay ─────────────────────────────────────────────────────────
-
-class _GameOverOverlay extends StatelessWidget {
-  final int score;
-  final VoidCallback onRestart;
-
-  const _GameOverOverlay({required this.score, required this.onRestart});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.black.withValues(alpha: 0.72),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'GAME OVER',
-              style: TextStyle(
-                color: Colors.cyanAccent,
-                fontSize: 36.0,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 8.0,
-              ),
-            ),
-            const SizedBox(height: 14.0),
-            Text(
-              'SCORE  $score',
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 20.0,
-                letterSpacing: 3.0,
-              ),
-            ),
-            const SizedBox(height: 32.0),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.cyanAccent,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32.0,
-                  vertical: 14.0,
-                ),
-                textStyle: const TextStyle(
-                  fontSize: 14.0,
-                  letterSpacing: 3.0,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              onPressed: onRestart,
-              child: const Text('PLAY AGAIN'),
             ),
           ],
         ),
