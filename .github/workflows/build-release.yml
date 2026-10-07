@@ -1,0 +1,462 @@
+name: Build & Release
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+  workflow_dispatch:
+    inputs:
+      build_target:
+        description: "What to build"
+        required: false
+        default: "apk"
+        type: choice
+        options:
+          - apk
+          - appbundle
+          - ipa
+          - web
+          - linux
+          - windows
+          - macos
+          - all
+      flutter_channel:
+        description: "Flutter channel"
+        required: false
+        default: "stable"
+        type: choice
+        options:
+          - stable
+          - beta
+          - master
+      web_renderer:
+        description: "Web renderer (web builds only)"
+        required: false
+        default: "canvaskit"
+        type: choice
+        options:
+          - canvaskit
+          - html
+          - skwasm
+          - auto
+
+# Cancel any in-progress run on the same ref so fast pushes don't queue up
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: ""          # Leave empty to use the latest on the selected channel.
+                               # Pin to e.g. "3.32.0" for fully reproducible builds.
+  FLUTTER_CHANNEL: "stable"    # Default channel for push / PR triggers.
+                               # Manual dispatch overrides this via the input dropdown.
+  WEB_RENDERER: "canvaskit"    # Default web renderer for push / PR triggers.
+                               # Options: canvaskit | html | skwasm | auto
+                               # Manual dispatch overrides this via the input dropdown.
+  JAVA_VERSION: "17"
+  JAVA_DISTRIBUTION: "temurin"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Resolve build target & Flutter channel once; broadcast via outputs
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+  resolve:
+    name: Resolve inputs
+    runs-on: ubuntu-latest
+    outputs:
+      target:        ${{ steps.pick.outputs.target }}
+      channel:       ${{ steps.pick.outputs.channel }}
+      web_renderer:  ${{ steps.pick.outputs.web_renderer }}
+      run_apk:       ${{ steps.pick.outputs.run_apk }}
+      run_appbundle: ${{ steps.pick.outputs.run_appbundle }}
+      run_ipa:       ${{ steps.pick.outputs.run_ipa }}
+      run_web:       ${{ steps.pick.outputs.run_web }}
+      run_linux:     ${{ steps.pick.outputs.run_linux }}
+      run_windows:   ${{ steps.pick.outputs.run_windows }}
+      run_macos:     ${{ steps.pick.outputs.run_macos }}
+    steps:
+      - name: Pick target & channel
+        id: pick
+        shell: bash
+        run: |
+          TARGET="${{ github.event.inputs.build_target }}"
+          CHANNEL="${{ github.event.inputs.flutter_channel }}"
+          RENDERER="${{ github.event.inputs.web_renderer }}"
+
+          # Defaults for push / PR (no manual inputs)
+          [ -z "$TARGET"   ] && TARGET="apk"
+          [ -z "$CHANNEL"  ] && CHANNEL="${{ env.FLUTTER_CHANNEL }}"
+          [ -z "$RENDERER" ] && RENDERER="${{ env.WEB_RENDERER }}"
+
+          echo "target=$TARGET"       >> "$GITHUB_OUTPUT"
+          echo "channel=$CHANNEL"     >> "$GITHUB_OUTPUT"
+          echo "web_renderer=$RENDERER" >> "$GITHUB_OUTPUT"
+
+          is() { [[ "$TARGET" == "$1" || "$TARGET" == "all" ]] && echo "true" || echo "false"; }
+          echo "run_apk=$(is apk)"             >> "$GITHUB_OUTPUT"
+          echo "run_appbundle=$(is appbundle)" >> "$GITHUB_OUTPUT"
+          echo "run_ipa=$(is ipa)"             >> "$GITHUB_OUTPUT"
+          echo "run_web=$(is web)"             >> "$GITHUB_OUTPUT"
+          echo "run_linux=$(is linux)"         >> "$GITHUB_OUTPUT"
+          echo "run_windows=$(is windows)"     >> "$GITHUB_OUTPUT"
+          echo "run_macos=$(is macos)"         >> "$GITHUB_OUTPUT"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# APK
+# ─────────────────────────────────────────────────────────────────────────────
+  build-apk:
+    name: Build APK
+    needs: resolve
+    if: needs.resolve.outputs.run_apk == 'true'
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v6
+        with:
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: ${{ needs.resolve.outputs.channel }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run build_runner
+        run: dart run build_runner build --release --delete-conflicting-outputs
+
+      - name: Build APK (release)
+        run: flutter build apk --release
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: bholix-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+
+      - name: Create / update GitHub Release
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: "Build #${{ github.run_number }}"
+          files: build/app/outputs/flutter-apk/app-release.apk
+          generate_release_notes: true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# App Bundle (AAB)
+# ─────────────────────────────────────────────────────────────────────────────
+  build-appbundle:
+    name: Build App Bundle
+    needs: resolve
+    if: needs.resolve.outputs.run_appbundle == 'true'
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v6
+        with:
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: ${{ needs.resolve.outputs.channel }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run build_runner
+        run: dart run build_runner build --release --delete-conflicting-outputs
+
+      - name: Build App Bundle (release)
+        run: flutter build appbundle --release
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: bholix-aab
+          path: build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+      - name: Create / update GitHub Release
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: "Build #${{ github.run_number }}"
+          files: build/app/outputs/bundle/release/app-release.aab
+          generate_release_notes: true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# IPA (iOS) — no-codesign; add signing steps when certificates are available
+# ─────────────────────────────────────────────────────────────────────────────
+  build-ipa:
+    name: Build IPA
+    needs: resolve
+    if: needs.resolve.outputs.run_ipa == 'true'
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: ${{ needs.resolve.outputs.channel }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run build_runner
+        run: dart run build_runner build --release --delete-conflicting-outputs
+
+      - name: Build IPA (no-codesign)
+        run: flutter build ipa --release --no-codesign
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: bholix-ipa
+          path: build/ios/ipa/*.ipa
+          retention-days: 30
+
+      - name: Create / update GitHub Release
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: "Build #${{ github.run_number }}"
+          files: build/ios/ipa/*.ipa
+          generate_release_notes: true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Web — built on macOS; deployed to GitHub Pages on main/master
+# ─────────────────────────────────────────────────────────────────────────────
+  build-web:
+    name: Build Web
+    needs: resolve
+    if: needs.resolve.outputs.run_web == 'true'
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: ${{ needs.resolve.outputs.channel }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run build_runner
+        run: dart run build_runner build --release --delete-conflicting-outputs
+
+      - name: Build Web (release)
+        run: flutter build web --release --web-renderer ${{ needs.resolve.outputs.web_renderer }}
+
+      - name: Upload Web artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: bholix-web
+          path: build/web/
+          retention-days: 30
+
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    needs: build-web
+    if: |
+      needs.build-web.result == 'success' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download Web artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: bholix-web
+          path: build/web
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: build/web
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Linux — must run on ubuntu runner (GTK toolchain unavailable on macOS)
+# ─────────────────────────────────────────────────────────────────────────────
+  build-linux:
+    name: Build Linux
+    needs: resolve
+    if: needs.resolve.outputs.run_linux == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev libstdc++-12-dev
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: ${{ needs.resolve.outputs.channel }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run build_runner
+        run: dart run build_runner build --release --delete-conflicting-outputs
+
+      - name: Build Linux (release)
+        run: flutter build linux --release
+
+      - name: Tar Linux bundle
+        run: tar -czf bholix-linux.tar.gz -C build/linux/x64/release/bundle .
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: bholix-linux
+          path: bholix-linux.tar.gz
+          retention-days: 30
+
+      - name: Create / update GitHub Release
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: "Build #${{ github.run_number }}"
+          files: bholix-linux.tar.gz
+          generate_release_notes: true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Windows — must run on windows runner (MSVC toolchain)
+# ─────────────────────────────────────────────────────────────────────────────
+  build-windows:
+    name: Build Windows
+    needs: resolve
+    if: needs.resolve.outputs.run_windows == 'true'
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: ${{ needs.resolve.outputs.channel }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run build_runner
+        run: dart run build_runner build --release --delete-conflicting-outputs
+
+      - name: Build Windows (release)
+        run: flutter build windows --release
+
+      - name: Zip Windows bundle
+        run: Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath bholix-windows.zip
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: bholix-windows
+          path: bholix-windows.zip
+          retention-days: 30
+
+      - name: Create / update GitHub Release
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: "Build #${{ github.run_number }}"
+          files: bholix-windows.zip
+          generate_release_notes: true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# macOS — must run on macos runner
+# ─────────────────────────────────────────────────────────────────────────────
+  build-macos:
+    name: Build macOS
+    needs: resolve
+    if: needs.resolve.outputs.run_macos == 'true'
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: ${{ needs.resolve.outputs.channel }}
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run build_runner
+        run: dart run build_runner build --release --delete-conflicting-outputs
+
+      - name: Build macOS (release)
+        run: flutter build macos --release
+
+      - name: Zip macOS app
+        run: zip -r bholix-macos.zip build/macos/Build/Products/Release/bholix.app
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: bholix-macos
+          path: bholix-macos.zip
+          retention-days: 30
+
+      - name: Create / update GitHub Release
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: "Build #${{ github.run_number }}"
+          files: bholix-macos.zip
+          generate_release_notes: true
