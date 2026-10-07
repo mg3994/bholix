@@ -79,6 +79,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _syncKeyboardToGame() {
+    if (!_game.gameCubit.stateValue.isPlaying) {
+      _game.setKeyLeft(false);
+      _game.setKeyRight(false);
+      _game.setKeyThrust(false);
+      _game.setKeyBrake(false);
+      _game.setFiring(false);
+      return;
+    }
+
     _game.setKeyLeft(
       _heldKeys.contains(LogicalKeyboardKey.arrowLeft) ||
           _heldKeys.contains(LogicalKeyboardKey.keyA),
@@ -106,6 +115,13 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   }
 
   void _onTick(Duration _, double dt) {
+    if (!_game.gameCubit.stateValue.isPlaying) {
+      _joystickDir.value = vm.Vector2.zero();
+      _firePressed.value = false;
+      _heldKeys.clear();
+      return;
+    }
+
     _syncKeyboardToGame();
     _game.setJoystickInput(_joystickDir.value);
     _game.tick(dt);
@@ -138,6 +154,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 gameCubit: _game.gameCubit,
                 joystickDirection: _joystickDir,
                 firePressed: _firePressed,
+                asteroidField: _game.asteroidField,
+                shipPosition: _game.shipPosition,
                 onPause: _game.togglePause,
                 onResume: _game.resumeGame,
               ),

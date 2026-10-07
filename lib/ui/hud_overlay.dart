@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:bloc_signals_flutter/bloc_signals_flutter.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
+import '../game/asteroid_field.dart';
 import '../game/models/game_state.dart';
 import 'joystick_widget.dart';
+import 'radar_widget.dart';
 
 /// HUD overlaid on [SceneView] via a [Stack].
 ///
@@ -16,6 +18,8 @@ class HudOverlay extends StatelessWidget {
   final GameCubit gameCubit;
   final ValueNotifier<vm.Vector2> joystickDirection;
   final ValueNotifier<bool> firePressed;
+  final AsteroidField? asteroidField;
+  final vm.Vector3? shipPosition;
   final VoidCallback onPause;
   final VoidCallback onResume;
 
@@ -24,6 +28,8 @@ class HudOverlay extends StatelessWidget {
     required this.gameCubit,
     required this.joystickDirection,
     required this.firePressed,
+    this.asteroidField,
+    this.shipPosition,
     required this.onPause,
     required this.onResume,
   });
@@ -199,6 +205,25 @@ class HudOverlay extends StatelessWidget {
             ),
           ),
         ),
+
+        // ── Tactical Space Radar Mini-map — top left below header bar ────────
+        if (asteroidField != null && shipPosition != null)
+          Positioned(
+            top: padding.top + 76.0,
+            left: 20.0,
+            child: BlocSignalSelector<GameCubit, GameStateRecord, bool>(
+              bloc: gameCubit,
+              selector: (s) => s.isPlaying,
+              builder: (_, isPlaying) => isPlaying
+                  ? RadarWidget(
+                      shipPos: shipPosition!,
+                      shipYaw: 0.0,
+                      asteroidField: asteroidField!,
+                      radius: 42.0,
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ),
 
         // ── Joystick — bottom left ────────────────────────────────────────
         Positioned(

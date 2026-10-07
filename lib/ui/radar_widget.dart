@@ -48,12 +48,12 @@ class RadarWidget extends StatelessWidget {
 class _RadarPainter extends CustomPainter {
   final vm.Vector3 shipPos;
   final double shipYaw;
-  final List dynamicAsteroids;
+  final List asteroids;
 
   _RadarPainter({
     required this.shipPos,
     required this.shipYaw,
-    required this.dynamicAsteroids,
+    required this.asteroids,
   });
 
   @override
@@ -83,7 +83,7 @@ class _RadarPainter extends CustomPainter {
 
     // Asteroid blips
     final astPaint = Paint()..style = PaintingStyle.fill;
-    for (final a in dynamicAsteroids) {
+    for (final a in asteroids) {
       if (!a.alive) continue;
       final dx = a.position.x - shipPos.x;
       final dz = a.position.z - shipPos.z;
