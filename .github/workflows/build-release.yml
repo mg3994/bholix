@@ -10,7 +10,7 @@ on:
       build_target:
         description: "What to build"
         required: false
-        default: "apk"
+        default: "web"
         type: choice
         options:
           - apk
@@ -24,7 +24,7 @@ on:
       flutter_channel:
         description: "Flutter channel"
         required: false
-        default: "stable"
+        default: "beta"
         type: choice
         options:
           - stable
@@ -33,7 +33,7 @@ on:
       web_renderer:
         description: "Web renderer (web builds only)"
         required: false
-        default: "canvaskit"
+        default: "skwasm"
         type: choice
         options:
           - canvaskit
@@ -47,9 +47,9 @@ concurrency:
 env:
   FLUTTER_VERSION: ""          # Leave empty to use the latest on the selected channel.
                                # Pin to e.g. "3.32.0" for fully reproducible builds.
-  FLUTTER_CHANNEL: "stable"    # Default channel for push / PR triggers.
+  FLUTTER_CHANNEL: "beta"    # Default channel for push / PR triggers.
                                # Manual dispatch overrides this via the input dropdown.
-  WEB_RENDERER: "canvaskit"    # Default web renderer for push / PR triggers.
+  WEB_RENDERER: "skwasm"    # Default web renderer for push / PR triggers.
                                # Options: canvaskit (default, no extra flag) | skwasm (passes --wasm)
                                # html and auto were removed in Flutter 3.29.
                                # Manual dispatch overrides this via the input dropdown.
