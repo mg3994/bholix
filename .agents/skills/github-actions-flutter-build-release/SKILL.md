@@ -131,11 +131,13 @@ Cancels queued runs on the same branch when a newer push arrives, saving runner 
   run: |
     RENDERER="${{ needs.resolve.outputs.web_renderer }}"
     if [ "$RENDERER" = "skwasm" ]; then
-      flutter build web --release --wasm
+      flutter build web --release --wasm --base-href=/${{ github.event.repository.name }}/
     else
-      flutter build web --release
+      flutter build web --release --base-href=/${{ github.event.repository.name }}/
     fi
 ```
+
+`--base-href` is **required for GitHub Pages**. GitHub Pages serves a repo at `https://<user>.github.io/<repo>/` (not at the root `/`), so without this flag all asset paths are wrong and the app loads a blank white screen. The value `/${{ github.event.repository.name }}/` is resolved by GitHub Actions at runtime to e.g. `/bholix/`. Omit it only when deploying to a custom domain or a root Pages site (`<user>.github.io` with no sub-path).
 
 Only two renderers remain:
 

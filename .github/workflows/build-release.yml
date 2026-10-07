@@ -283,9 +283,9 @@ jobs:
         run: |
           RENDERER="${{ needs.resolve.outputs.web_renderer }}"
           if [ "$RENDERER" = "skwasm" ]; then
-            flutter build web --release --wasm
+            flutter build web --release --wasm --base-href=/${{ github.event.repository.name }}/
           else
-            flutter build web --release
+            flutter build web --release --base-href=/${{ github.event.repository.name }}/
           fi
 
       - name: Upload Web artifact
