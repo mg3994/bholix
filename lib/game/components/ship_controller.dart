@@ -15,7 +15,16 @@ class ShipController extends Component {
   vm.Vector3 velocity = vm.Vector3.zero();
 
   double _yaw = 0.0; // current facing angle around Y (radians)
+  double _roll = 0.0; // banking roll angle around Z (radians)
+  double _pitch = 0.0; // pitch tilt angle around X (radians)
   vm.Vector2 _joystickInput = vm.Vector2.zero();
+
+  double get roll => _roll;
+  double get pitch => _pitch;
+  double get yaw => _yaw;
+
+  /// World position of the ship node.
+  vm.Vector3 get worldPosition => node.globalTransform.getTranslation();
 
   // Keyboard state — held keys accumulate input
   bool _keyLeft = false;
@@ -103,8 +112,20 @@ class ShipController extends Component {
     final pos = node.globalTransform.getTranslation();
     node.position = pos + velocity * deltaSeconds;
 
-    // ── facing rotation ────────────────────────────────────────────────────
-    node.rotation = vm.Quaternion.axisAngle(vm.Vector3(0.0, 1.0, 0.0), _yaw);
+    // ── dynamic banking roll & pitch tilt calculation ────────────────────────
+    final targetRoll = (-inputX * 0.45).clamp(-0.45, 0.45);
+    final targetPitch = (-inputY * 0.22).clamp(-0.25, 0.25);
+
+    // Smooth lerp toward target angles
+    _roll += (targetRoll - _roll) * math.min(1.0, deltaSeconds * 8.0);
+    _pitch += (targetPitch - _pitch) * math.min(1.0, deltaSeconds * 8.0);
+
+    // Compose orientation quaternion: Yaw * Pitch * Roll
+    final qYaw = vm.Quaternion.axisAngle(vm.Vector3(0.0, 1.0, 0.0), _yaw);
+    final qPitch = vm.Quaternion.axisAngle(vm.Vector3(1.0, 0.0, 0.0), _pitch);
+    final qRoll = vm.Quaternion.axisAngle(vm.Vector3(0.0, 0.0, 1.0), _roll);
+
+    node.rotation = qYaw * qPitch * qRoll;
 
     // ── wrap at field boundaries ───────────────────────────────────────────
     _wrapPosition();

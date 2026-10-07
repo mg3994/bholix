@@ -9,6 +9,7 @@ import 'bullet_pool.dart';
 import 'components/ship_controller.dart';
 import 'components/collision_system.dart';
 import 'models/game_state.dart';
+import 'space_dust.dart';
 
 /// Owns the [Scene], sub-systems, and per-frame tick.
 ///
@@ -24,6 +25,7 @@ class Game {
   // ── sub-systems ────────────────────────────────────────────────────────────
   final AsteroidField _asteroidField = AsteroidField();
   final BulletPool _bulletPool = BulletPool();
+  final SpaceDustField _spaceDust = SpaceDustField();
 
   // ── scene nodes ─── (declared at class level, initialised in _buildShip) ──
   late final Node _shipNode;
@@ -63,6 +65,7 @@ class Game {
     _setupCamera();
     _asteroidField.init(scene);
     _bulletPool.init(scene);
+    _spaceDust.init(scene);
     _registerCollisionSystem();
     _applyPlatformQuality();
 
@@ -101,6 +104,7 @@ class Game {
 
     _asteroidField.update(dt);
     _bulletPool.update(dt);
+    _spaceDust.update(_shipController.worldPosition);
 
     // ── invincibility flash ────────────────────────────────────────────────
     _updateInvincibilityFlash(dt, state);
