@@ -138,6 +138,8 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 gameCubit: _game.gameCubit,
                 joystickDirection: _joystickDir,
                 firePressed: _firePressed,
+                asteroidField: _game.asteroidField,
+                shipPosition: _game.shipPosition,
                 onPause: _game.togglePause,
                 onResume: _game.resumeGame,
               ),

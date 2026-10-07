@@ -27,6 +27,9 @@ class Game {
   final BulletPool _bulletPool = BulletPool();
   final SpaceDustField _spaceDust = SpaceDustField();
 
+  AsteroidField get asteroidField => _asteroidField;
+  vm.Vector3 get shipPosition => _shipController.worldPosition;
+
   // ── scene nodes ─── (declared at class level, initialised in _buildShip) ──
   late final Node _shipNode;
   late final Node _leftEngineNode;
