@@ -43,66 +43,120 @@ class HudOverlay extends StatelessWidget {
               : const SizedBox.shrink(),
         ),
 
-        // ── Score — top center ────────────────────────────────────────────
+        // ── Top Header Glass Bar ──────────────────────────────────────────
         Positioned(
-          top: padding.top + 16.0,
-          left: 0,
-          right: 0,
-          child: BlocSignalSelector<GameCubit, GameStateRecord, int>(
-            bloc: gameCubit,
-            selector: (s) => s.score,
-            builder: (_, score) => Center(
-              child: Text(
-                '$score',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 28.0,
-                  fontWeight: FontWeight.w200,
-                  letterSpacing: 6.0,
+          top: padding.top + 12.0,
+          left: 16.0,
+          right: 16.0,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0A101D).withValues(alpha: 0.75),
+              borderRadius: BorderRadius.circular(16.0),
+              border: Border.all(color: Colors.cyanAccent.withValues(alpha: 0.25)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.cyanAccent.withValues(alpha: 0.08),
+                  blurRadius: 16,
                 ),
-              ),
+              ],
             ),
-          ),
-        ),
-
-        // ── Lives — top left ──────────────────────────────────────────────
-        Positioned(
-          top: padding.top + 14.0,
-          left: 20.0,
-          child: BlocSignalSelector<GameCubit, GameStateRecord, int>(
-            bloc: gameCubit,
-            selector: (s) => s.lives,
-            builder: (_, lives) => Row(
-              children: List.generate(
-                3,
-                (i) => Padding(
-                  padding: const EdgeInsets.only(right: 6.0),
-                  child: Icon(
-                    Icons.rocket_launch_rounded,
-                    size: 18.0,
-                    color: i < lives ? Colors.cyanAccent : Colors.white12,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Lives / Shield Hull Status
+                BlocSignalSelector<GameCubit, GameStateRecord, int>(
+                  bloc: gameCubit,
+                  selector: (s) => s.lives,
+                  builder: (_, lives) => Row(
+                    children: [
+                      const Text(
+                        'HULL ',
+                        style: TextStyle(
+                          color: Colors.white54,
+                          fontSize: 10.0,
+                          letterSpacing: 2.0,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Row(
+                        children: List.generate(
+                          3,
+                          (i) => Padding(
+                            padding: const EdgeInsets.only(right: 6.0),
+                            child: Icon(
+                              Icons.shield_rounded,
+                              size: 18.0,
+                              color: i < lives ? Colors.cyanAccent : Colors.white12,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ),
-          ),
-        ),
 
-        // ── Wave — top right ──────────────────────────────────────────────
-        Positioned(
-          top: padding.top + 14.0,
-          right: 20.0,
-          child: BlocSignalSelector<GameCubit, GameStateRecord, int>(
-            bloc: gameCubit,
-            selector: (s) => s.wave,
-            builder: (_, wave) => Text(
-              'WAVE  $wave',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.55),
-                fontSize: 11.0,
-                letterSpacing: 4.0,
-                fontWeight: FontWeight.w300,
-              ),
+                // Score Display
+                BlocSignalSelector<GameCubit, GameStateRecord, int>(
+                  bloc: gameCubit,
+                  selector: (s) => s.score,
+                  builder: (_, score) => Text(
+                    '$score',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24.0,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 4.0,
+                      shadows: [
+                        BoxShadow(color: Colors.cyanAccent, blurRadius: 10),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Wave Counter & Pause Button
+                Row(
+                  children: [
+                    BlocSignalSelector<GameCubit, GameStateRecord, int>(
+                      bloc: gameCubit,
+                      selector: (s) => s.wave,
+                      builder: (_, wave) => Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
+                        decoration: BoxDecoration(
+                          color: Colors.cyanAccent.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8.0),
+                          border: Border.all(color: Colors.cyanAccent.withValues(alpha: 0.3)),
+                        ),
+                        child: Text(
+                          'WAVE $wave',
+                          style: const TextStyle(
+                            color: Colors.cyanAccent,
+                            fontSize: 11.0,
+                            letterSpacing: 2.0,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12.0),
+                    GestureDetector(
+                      onTap: onPause,
+                      child: Container(
+                        padding: const EdgeInsets.all(4.0),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withValues(alpha: 0.1),
+                        ),
+                        child: const Icon(
+                          Icons.pause_rounded,
+                          color: Colors.white,
+                          size: 20.0,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),
@@ -146,24 +200,39 @@ class HudOverlay extends StatelessWidget {
           ),
         ),
 
-        // ── Joystick — bottom left ────────────────────────────────────────
-        Positioned(
-          bottom: padding.bottom + 24.0,
-          left: 24.0,
-          child: JoystickWidget(direction: joystickDirection, size: 130.0),
-        ),
-
-        // ── Fire button — bottom right ────────────────────────────────────
-        Positioned(
-          bottom: padding.bottom + 32.0,
-          right: 32.0,
-          child: ValueListenableBuilder<bool>(
-            valueListenable: firePressed,
-            builder: (_, pressed, _) => _FireButton(
-              pressed: pressed,
-              onTapDown: () => firePressed.value = true,
-              onRelease: () => firePressed.value = false,
-            ),
+        // ── Joystick & Controls — bottom overlay (visible ONLY when playing) ──
+        Positioned.fill(
+          child: BlocSignalSelector<GameCubit, GameStateRecord, bool>(
+            bloc: gameCubit,
+            selector: (s) => s.isPlaying,
+            builder: (_, isPlaying) {
+              if (!isPlaying) return const SizedBox.shrink();
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  Positioned(
+                    bottom: padding.bottom + 24.0,
+                    left: 24.0,
+                    child: JoystickWidget(
+                      direction: joystickDirection,
+                      size: 130.0,
+                    ),
+                  ),
+                  Positioned(
+                    bottom: padding.bottom + 32.0,
+                    right: 32.0,
+                    child: ValueListenableBuilder<bool>(
+                      valueListenable: firePressed,
+                      builder: (context, pressed, child) => _FireButton(
+                        pressed: pressed,
+                        onTapDown: () => firePressed.value = true,
+                        onRelease: () => firePressed.value = false,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
 

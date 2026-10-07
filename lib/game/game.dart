@@ -167,105 +167,150 @@ class Game {
 
   void _setupEnvironment() {
     final skySource = PhysicalSkySource(
-      sunDirection: (vm.Vector3(-0.4, -0.6, 0.7)..normalize()),
-      turbidity: 2.0,
-      energy: 0.55,
+      sunDirection: (vm.Vector3(-0.5, -0.4, 0.77)..normalize()),
+      turbidity: 1.5,
+      energy: 0.3,
     );
-    scene.skybox = Skybox(skySource, intensity: 0.35);
+    scene.skybox = Skybox(skySource, intensity: 0.25);
 
     scene.directionalLight = DirectionalLight(
-      direction: (vm.Vector3(-0.4, -0.6, 0.7)..normalize()),
-      color: vm.Vector3(0.9, 0.85, 0.7),
-      intensity: 2.5,
+      direction: (vm.Vector3(-0.5, -0.6, 0.6)..normalize()),
+      color: vm.Vector3(0.7, 0.85, 1.0), // Deep blue-cyan cosmic star light
+      intensity: 3.5,
       castsShadow: true,
-      shadowMaxDistance: 80.0,
-      shadowMapResolution: 512,
+      shadowMaxDistance: 100.0,
+      shadowMapResolution: 1024,
     );
 
     scene.environmentSettings = EnvironmentSettings(
       toneMapping: ToneMappingMode.aces,
-      exposure: 0.8,
+      exposure: 1.0,
       colorGradingEnabled: true,
-      contrast: 1.15,
-      saturation: 0.85,
-      temperature: -0.15,
+      contrast: 1.25,
+      saturation: 1.1,
+      temperature: -0.2,
       fogEnabled: true,
       fogMode: FogMode.exponential,
-      fogColor: vm.Vector3(0.01, 0.01, 0.04),
-      fogDensity: 0.008,
+      fogColor: vm.Vector3(0.01, 0.02, 0.06),
+      fogDensity: 0.005,
       ambientOcclusionEnabled: true,
       ambientOcclusionMethod: AmbientOcclusionMethod.groundTruth,
       ambientOcclusionHalfResolution: true,
-      ambientOcclusionIntensity: 1.0,
+      ambientOcclusionIntensity: 1.2,
       vignetteEnabled: true,
-      vignetteIntensity: 0.55,
-      vignetteRadius: 0.65,
+      vignetteIntensity: 0.6,
+      vignetteRadius: 0.6,
       bloomEnabled: true,
-      bloomThreshold: 0.85,
-      bloomIntensity: 0.35,
-      bloomScatter: 0.75,
+      bloomThreshold: 0.65,
+      bloomIntensity: 0.85,
+      bloomScatter: 0.8,
       lensFlareEnabled: true,
-      lensFlareIntensity: 0.6,
+      lensFlareIntensity: 0.9,
       filmGrainEnabled: true,
-      filmGrainIntensity: 0.18,
+      filmGrainIntensity: 0.12,
       chromaticAberrationEnabled: true,
-      chromaticAberrationIntensity: 0.08,
+      chromaticAberrationIntensity: 0.12,
       godRaysEnabled: true,
-      godRaysIntensity: 0.8,
-      godRaysDensity: 0.5,
-      godRaysColor: vm.Vector3(0.9, 0.85, 0.7),
+      godRaysIntensity: 0.9,
+      godRaysDensity: 0.6,
+      godRaysColor: vm.Vector3(0.2, 0.8, 1.0),
     );
   }
 
   void _buildShip() {
+    // Futuristic multi-part Starfighter mesh
+
+    // 1. Sleek metallic Fuselage
     final bodyMat = PhysicallyBasedMaterial()
-      ..baseColorFactor = vm.Vector4(0.25, 0.35, 0.55, 1.0)
-      ..metallicFactor = 0.8
-      ..roughnessFactor = 0.3
-      ..emissiveFactor = vm.Vector4(0.05, 0.1, 0.25, 1.0)
-      ..emissiveStrength = 2.0;
+      ..baseColorFactor = vm.Vector4(0.08, 0.12, 0.2, 1.0)
+      ..metallicFactor = 0.95
+      ..roughnessFactor = 0.15
+      ..emissiveFactor = vm.Vector4(0.0, 0.3, 0.6, 1.0)
+      ..emissiveStrength = 3.0;
 
     final bodyNode = Node(
-      mesh: Mesh(WedgeGeometry(vm.Vector3(1.2, 0.4, 2.8)), bodyMat),
+      mesh: Mesh(WedgeGeometry(vm.Vector3(1.1, 0.45, 3.2)), bodyMat),
     );
 
-    final engineMat = PhysicallyBasedMaterial()
-      ..baseColorFactor = vm.Vector4(0.15, 0.15, 0.2, 1.0)
+    // 2. Glowing Sci-Fi Canopy / Cockpit
+    final cockpitMat = PhysicallyBasedMaterial()
+      ..baseColorFactor = vm.Vector4(0.0, 0.8, 1.0, 0.8)
+      ..metallicFactor = 0.1
+      ..roughnessFactor = 0.05
+      ..emissiveFactor = vm.Vector4(0.0, 0.9, 1.0, 1.0)
+      ..emissiveStrength = 10.0;
+
+    final cockpitNode = Node(
+      mesh: Mesh(CapsuleGeometry(radius: 0.32, height: 0.9), cockpitMat),
+    )..position = vm.Vector3(0.0, 0.22, -0.3);
+
+    // 3. Swept-Back Wings
+    final wingMat = PhysicallyBasedMaterial()
+      ..baseColorFactor = vm.Vector4(0.12, 0.16, 0.25, 1.0)
       ..metallicFactor = 0.9
-      ..roughnessFactor = 0.2
-      ..emissiveFactor = vm.Vector4(0.4, 0.6, 1.0, 1.0)
-      ..emissiveStrength = 6.0;
+      ..roughnessFactor = 0.25;
+
+    final leftWing = Node(
+      mesh: Mesh(WedgeGeometry(vm.Vector3(1.8, 0.08, 1.6)), wingMat),
+    )..position = vm.Vector3(-1.1, 0.0, 0.3);
+
+    final rightWing = Node(
+      mesh: Mesh(WedgeGeometry(vm.Vector3(1.8, 0.08, 1.6)), wingMat),
+    )..position = vm.Vector3(1.1, 0.0, 0.3);
+
+    // Wingtip glowing plasma emitters
+    final wingtipGlowMat = PhysicallyBasedMaterial()
+      ..baseColorFactor = vm.Vector4(0.0, 1.0, 0.8, 1.0)
+      ..emissiveFactor = vm.Vector4(0.0, 1.0, 0.8, 1.0)
+      ..emissiveStrength = 15.0;
+
+    leftWing.add(
+      Node(mesh: Mesh(SphereGeometry(radius: 0.12), wingtipGlowMat))
+        ..position = vm.Vector3(-0.9, 0.0, 0.6),
+    );
+    rightWing.add(
+      Node(mesh: Mesh(SphereGeometry(radius: 0.12), wingtipGlowMat))
+        ..position = vm.Vector3(0.9, 0.0, 0.6),
+    );
+
+    // 4. Dual Plasma Engines with dynamic lights & trails
+    final engineMat = PhysicallyBasedMaterial()
+      ..baseColorFactor = vm.Vector4(0.1, 0.1, 0.15, 1.0)
+      ..metallicFactor = 0.95
+      ..roughnessFactor = 0.1
+      ..emissiveFactor = vm.Vector4(0.0, 0.7, 1.0, 1.0)
+      ..emissiveStrength = 18.0;
 
     _leftEngineNode = Node(
       mesh: Mesh(
-        CylinderGeometry(bottomRadius: 0.18, topRadius: 0.12, height: 1.0),
+        CylinderGeometry(bottomRadius: 0.22, topRadius: 0.12, height: 1.2),
         engineMat,
       ),
-    )..position = vm.Vector3(-0.55, -0.05, 0.8);
+    )..position = vm.Vector3(-0.6, -0.02, 1.1);
 
     _rightEngineNode = Node(
       mesh: Mesh(
-        CylinderGeometry(bottomRadius: 0.18, topRadius: 0.12, height: 1.0),
+        CylinderGeometry(bottomRadius: 0.22, topRadius: 0.12, height: 1.2),
         engineMat,
       ),
-    )..position = vm.Vector3(0.55, -0.05, 0.8);
+    )..position = vm.Vector3(0.6, -0.02, 1.1);
 
     _leftEngineNode
       ..addComponent(
         PointLightComponent(
           PointLight(
-            color: vm.Vector3(0.4, 0.6, 1.0),
-            intensity: 3.0,
-            range: 4.0,
+            color: vm.Vector3(0.0, 0.8, 1.0),
+            intensity: 8.0,
+            range: 6.0,
           ),
         ),
       )
       ..addComponent(
         TrailComponent(
-          width: 0.18,
-          lifetime: 0.5,
-          minVertexDistance: 0.04,
-          maxPoints: 40,
+          width: 0.28,
+          lifetime: 0.6,
+          minVertexDistance: 0.03,
+          maxPoints: 60,
         ),
       );
 
@@ -273,18 +318,18 @@ class Game {
       ..addComponent(
         PointLightComponent(
           PointLight(
-            color: vm.Vector3(0.4, 0.6, 1.0),
-            intensity: 3.0,
-            range: 4.0,
+            color: vm.Vector3(0.0, 0.8, 1.0),
+            intensity: 8.0,
+            range: 6.0,
           ),
         ),
       )
       ..addComponent(
         TrailComponent(
-          width: 0.18,
-          lifetime: 0.5,
-          minVertexDistance: 0.04,
-          maxPoints: 40,
+          width: 0.28,
+          lifetime: 0.6,
+          minVertexDistance: 0.03,
+          maxPoints: 60,
         ),
       );
 
@@ -293,6 +338,9 @@ class Game {
     _shipNode
       ..addComponent(_shipController)
       ..add(bodyNode)
+      ..add(cockpitNode)
+      ..add(leftWing)
+      ..add(rightWing)
       ..add(_leftEngineNode)
       ..add(_rightEngineNode);
 
