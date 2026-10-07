@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:kaisel/kaisel.dart';
 
 import '../ui/menu_screen.dart';
@@ -6,9 +5,6 @@ import '../ui/game_screen.dart';
 import '../ui/game_over_screen.dart';
 
 // ── Sealed route hierarchy ────────────────────────────────────────────────────
-//
-// Dart 3 sealed class — compiler enforces exhaustiveness in every switch.
-// KaiselRoute provides value equality via props; no manual == or hashCode.
 
 sealed class AppRoute extends KaiselRoute {
   const AppRoute();
@@ -23,24 +19,24 @@ final class PlayingRoute extends AppRoute {
 }
 
 final class GameOverRoute extends AppRoute {
-  const GameOverRoute({required this.finalScore});
+  const GameOverRoute({required this.finalScore, required this.wavesReached});
   final int finalScore;
+  final int wavesReached;
 
   @override
-  List<Object?> get props => [finalScore];
+  List<Object?> get props => [finalScore, wavesReached];
 }
 
-// ── Router config — app-lifetime singleton ────────────────────────────────────
-//
-// KaiselRouterConfig collapses router + delegate + parser into one object.
-// Pass to MaterialApp.router(routerConfig: appRouterConfig).
-// Navigate with context.push / context.pushOrReplaceTop (typed, compile-safe).
+// ── App-lifetime router config ─────────────────────────────────────────────────
 
 final appRouterConfig = KaiselRouterConfig<AppRoute>(
   initial: const MenuRoute(),
   builder: (context, route) => switch (route) {
     MenuRoute() => const MenuScreen(),
     PlayingRoute() => const GameScreen(),
-    GameOverRoute(:final finalScore) => GameOverScreen(finalScore: finalScore),
+    GameOverRoute(:final finalScore, :final wavesReached) => GameOverScreen(
+      finalScore: finalScore,
+      wavesReached: wavesReached,
+    ),
   },
 );

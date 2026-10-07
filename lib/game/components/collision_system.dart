@@ -5,13 +5,10 @@ import '../asteroid_field.dart';
 import '../bullet_pool.dart';
 import '../models/game_state.dart';
 
-/// Runs sphere-vs-sphere collision detection before any component ticks.
+/// Sphere-vs-sphere collision detection run before any component ticks.
 ///
 /// [SceneTickListener.beforeTick] fires before all [Component.update] calls,
-/// so kills made here are reflected in the same frame's component updates.
-///
-/// Holds a direct reference to [GameCubit] — reads [stateValue] for the
-/// phase guard and calls [addScore] / [loseLife] which [emit] synchronously.
+/// ensuring kills are reflected in the same frame's render.
 class CollisionSystem extends SceneTickListener {
   final AsteroidField asteroidField;
   final BulletPool bulletPool;
@@ -20,9 +17,10 @@ class CollisionSystem extends SceneTickListener {
   final vm.Vector3 Function() getShipPosition;
 
   static const double _shipHitRadius = 0.9;
-  static const double _bulletHitRadius = 0.14;
+  static const double _bulletHitRadius = 0.13;
 
-  const CollisionSystem({
+  // No const — AsteroidField / BulletPool are not const objects
+  CollisionSystem({
     required this.asteroidField,
     required this.bulletPool,
     required this.gameCubit,
@@ -32,7 +30,12 @@ class CollisionSystem extends SceneTickListener {
 
   @override
   void beforeTick(double deltaSeconds) {
-    if (gameCubit.stateValue.isGameOver) return;
+    final state = gameCubit.stateValue;
+    if (!state.isPlaying) return;
+
+    // Tick timers first so invincibility expires correctly
+    gameCubit.tickTimers(deltaSeconds);
+
     _checkBulletVsAsteroid();
     _checkShipVsAsteroid();
   }
@@ -47,17 +50,23 @@ class CollisionSystem extends SceneTickListener {
         final dist = (bullet.position - asteroid.position).length;
         if (dist < asteroid.radius + _bulletHitRadius) {
           bulletPool.killBullet(bullet.index);
-          final pts = asteroidField.scoreFor(asteroid.index);
-          asteroidField.destroy(asteroid.index, split: true);
+          final pts = asteroidField.destroy(
+            asteroid.index,
+            split: true,
+            shipPosition: getShipPosition(),
+          );
           gameCubit.addScore(pts);
-          addCameraTrauma(0.22);
-          break; // bullet consumed — next bullet
+          addCameraTrauma(0.18);
+          break;
         }
       }
     }
   }
 
   void _checkShipVsAsteroid() {
+    // Invincibility frames — skip ship collision check
+    if (gameCubit.stateValue.isInvincible) return;
+
     final shipPos = getShipPosition();
 
     for (final asteroid in asteroidField.asteroids) {
@@ -67,8 +76,8 @@ class CollisionSystem extends SceneTickListener {
       if (dist < asteroid.radius + _shipHitRadius) {
         asteroidField.destroy(asteroid.index, split: false);
         gameCubit.loseLife();
-        addCameraTrauma(0.85);
-        return; // one hit per frame
+        addCameraTrauma(0.9);
+        return;
       }
     }
   }

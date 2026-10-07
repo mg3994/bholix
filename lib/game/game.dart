@@ -10,23 +10,22 @@ import 'components/ship_controller.dart';
 import 'components/collision_system.dart';
 import 'models/game_state.dart';
 
-/// Owns the [Scene], all game objects, and the per-frame tick.
+/// Owns the [Scene], sub-systems, and per-frame tick.
 ///
 /// Pure Dart — no Flutter/Widget imports. The widget layer ([GameScreen])
-/// awaits [load], then forwards input + ticks. State is managed by
-/// [GameCubit] (CubitSignal) — synchronous, signal-speed, zero-microtask-delay.
+/// awaits [load], then forwards input + ticks each frame.
+///
+/// State management: [GameCubit] (CubitSignal) — synchronous emit,
+/// zero-microtask-delay, signal-speed reactive widgets.
 class Game {
   final Scene scene = Scene();
-
-  /// Reactive state — use [gameCubit.stateValue] to read, subscribe via
-  /// [BlocSignalBuilder] / [BlocSignalSelector] on the Flutter side.
   final GameCubit gameCubit = GameCubit();
 
   // ── sub-systems ────────────────────────────────────────────────────────────
   final AsteroidField _asteroidField = AsteroidField();
   final BulletPool _bulletPool = BulletPool();
 
-  // ── scene nodes ────────────────────────────────────────────────────────────
+  // ── scene nodes ─── (declared at class level, initialised in _buildShip) ──
   late final Node _shipNode;
   late final Node _leftEngineNode;
   late final Node _rightEngineNode;
@@ -36,12 +35,22 @@ class Game {
   late final ShipController _shipController;
   late final CameraShake _cameraShake;
 
-  // ── public input API ───────────────────────────────────────────────────────
-  void setShipInput(vm.Vector2 dir) => _shipController.setInput(dir);
-  void setFiring(bool v) => _shipController.setFiring(v);
+  // ── ship visibility for invincibility flash ────────────────────────────────
+  double _flashTimer = 0.0;
+  bool _shipVisible = true;
 
-  // ── camera trauma ─────────────────────────────────────────────────────────
+  // ── public input API ───────────────────────────────────────────────────────
+  void setJoystickInput(vm.Vector2 dir) =>
+      _shipController.setJoystickInput(dir);
+  void setFiring(bool v) => _shipController.setFiring(v);
+  void setKeyLeft(bool v) => _shipController.setKeyLeft(v);
+  void setKeyRight(bool v) => _shipController.setKeyRight(v);
+  void setKeyThrust(bool v) => _shipController.setKeyThrust(v);
+  void setKeyBrake(bool v) => _shipController.setKeyBrake(v);
+
   void addCameraTrauma(double amount) => _cameraShake.addTrauma(amount);
+  void togglePause() => gameCubit.togglePause();
+  void resumeGame() => gameCubit.resume();
 
   // ── load ───────────────────────────────────────────────────────────────────
 
@@ -75,13 +84,16 @@ class Game {
   // ── tick ───────────────────────────────────────────────────────────────────
 
   void tick(double dt) {
-    if (gameCubit.stateValue.isGameOver) return;
+    final state = gameCubit.stateValue;
 
-    // Fire bullets from the ship nose
+    // Paused or game over — don't update game objects
+    if (state.isPaused || state.isGameOver) return;
+
+    // ── fire bullets ───────────────────────────────────────────────────────
     if (_shipController.canFire) {
       final origin =
           _shipController.worldPosition +
-          _shipController.forward * 1.8 +
+          _shipController.forward * 2.0 +
           vm.Vector3(0.0, 0.1, 0.0);
       _bulletPool.fire(origin, _shipController.forward);
       _shipController.consumeFire();
@@ -90,21 +102,61 @@ class Game {
     _asteroidField.update(dt);
     _bulletPool.update(dt);
 
-    // Camera shake — SpringArm sets base transform; shake compounds on top
+    // ── invincibility flash ────────────────────────────────────────────────
+    _updateInvincibilityFlash(dt, state);
+
+    // ── wave completion check ──────────────────────────────────────────────
+    if (_asteroidField.aliveCount == 0) {
+      gameCubit.nextWave();
+      final nextWave = gameCubit.stateValue.wave;
+      _asteroidField.spawnWave(
+        waveNumber: nextWave,
+        shipPosition: _shipController.worldPosition,
+      );
+    }
+
+    // ── camera shake ───────────────────────────────────────────────────────
+    // SpringArmComponent writes the camera's base transform each frame.
+    // We apply shake as an ADDITIVE translation offset only, not a matrix
+    // multiply (which would compound indefinitely).
     final shakeOffset = _cameraShake.update(dt);
-    _cameraNode.mutateLocalTransform(
-      (m) => m.multiply(shakeOffset.toMatrix4()),
-    );
+    final translation = shakeOffset.toMatrix4().getTranslation();
+    if (translation.length > 0.001) {
+      _cameraNode.mutateLocalTransform((m) {
+        m.translateByVector3(translation);
+      });
+    }
+  }
+
+  void _updateInvincibilityFlash(double dt, GameStateRecord state) {
+    if (!state.isInvincible) {
+      if (!_shipVisible) {
+        _shipNode.visible = true;
+        _shipVisible = true;
+      }
+      _flashTimer = 0.0;
+      return;
+    }
+    _flashTimer += dt;
+    // Flash at 8 Hz (0.125s period)
+    final shouldBeVisible = (_flashTimer % 0.125) < 0.0625;
+    if (shouldBeVisible != _shipVisible) {
+      _shipNode.visible = shouldBeVisible;
+      _shipVisible = shouldBeVisible;
+    }
   }
 
   // ── reset ──────────────────────────────────────────────────────────────────
 
   void reset() {
-    _asteroidField.reset();
     _bulletPool.reset();
     _shipNode.position = vm.Vector3.zero();
-    _shipController.velocity = vm.Vector3.zero();
+    _shipNode.visible = true;
+    _shipVisible = true;
+    _flashTimer = 0.0;
+    _shipController.reset();
     gameCubit.reset();
+    _asteroidField.reset(shipPosition: vm.Vector3.zero());
   }
 
   // ── dispose ────────────────────────────────────────────────────────────────
@@ -250,8 +302,7 @@ class Game {
   void _setupCamera() {
     _cameraShake = CameraShake(decayRate: 1.5, frequency: 28.0);
 
-    // CameraComponent(activateOnMount: true) → SceneView needs no camera: arg
-    // Camera node must carry no scale (trap #28)
+    // Camera node must carry no scale (trap #28).
     _cameraNode = Node()..addComponent(CameraComponent(activateOnMount: true));
 
     _shipNode.addComponent(

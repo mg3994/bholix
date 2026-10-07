@@ -3,72 +3,110 @@ import 'dart:math' as math;
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
-/// Drives the player ship node from joystick input.
+/// Drives the player ship node from joystick + keyboard input.
 ///
-/// Input is set each frame via [setInput] (called from GameScreen before
-/// the scene tick). All transform mutations use the correct flutter_scene
-/// patterns — whole-value assignment, never in-place vector edit.
+/// All transform mutations follow correct flutter_scene patterns:
+/// whole-value assignment, never in-place vector/matrix edit (trap #1).
+///
+/// Drag is applied frame-rate-independently via the exponential decay
+/// formula: `velocity *= exp(-dampingPerSecond * dt)` which gives the same
+/// damping regardless of tick rate.
 class ShipController extends Component {
   vm.Vector3 velocity = vm.Vector3.zero();
 
   double _yaw = 0.0; // current facing angle around Y (radians)
-  vm.Vector2 _input = vm.Vector2.zero(); // joystick -1..1
+  vm.Vector2 _joystickInput = vm.Vector2.zero();
+
+  // Keyboard state — held keys accumulate input
+  bool _keyLeft = false;
+  bool _keyRight = false;
+  bool _keyUp = false; // thrust
+  bool _keyDown = false; // brake
   bool _firing = false;
   double _fireCooldown = 0.0;
 
-  static const double _thrustForce = 18.0;
-  static const double _rotateSpeed = 2.8; // radians per second
-  static const double _drag = 0.96; // per-frame multiplier
-  static const double _maxSpeed = 22.0;
-  static const double _fireRate = 0.22; // seconds between shots
+  static const double _thrustForce = 20.0;
+  static const double _rotateSpeed = 2.8; // radians/s
+  static const double _dampingPerSecond = 1.2; // velocity half-life
+  static const double _maxSpeed = 24.0;
+  static const double _fireRate = 0.20; // seconds between shots
 
-  // Called every frame from GameScreen/Game before scene tick
-  void setInput(vm.Vector2 dir) => _input = dir;
+  // ── input setters (called from GameScreen each frame) ─────────────────────
+
+  void setJoystickInput(vm.Vector2 dir) => _joystickInput = dir;
   void setFiring(bool v) => _firing = v;
+
+  void setKeyLeft(bool v) => _keyLeft = v;
+  void setKeyRight(bool v) => _keyRight = v;
+  void setKeyThrust(bool v) => _keyUp = v;
+  void setKeyBrake(bool v) => _keyDown = v;
 
   bool get canFire => _fireCooldown <= 0.0 && _firing;
   void consumeFire() => _fireCooldown = _fireRate;
 
   /// Unit vector pointing in the direction the ship faces (+Z rotated by yaw).
-  vm.Vector3 get forward =>
-      vm.Vector3(math.sin(_yaw), 0.0, math.cos(_yaw));
+  vm.Vector3 get forward => vm.Vector3(math.sin(_yaw), 0.0, math.cos(_yaw));
 
-  /// Current world position of the ship node.
+  /// World position of the ship node.
   vm.Vector3 get worldPosition => node.globalTransform.getTranslation();
+
+  /// Resets controller state — called on game restart.
+  void reset() {
+    velocity = vm.Vector3.zero();
+    _yaw = 0.0;
+    _joystickInput = vm.Vector2.zero();
+    _keyLeft = false;
+    _keyRight = false;
+    _keyUp = false;
+    _keyDown = false;
+    _firing = false;
+    _fireCooldown = 0.0;
+  }
 
   @override
   void update(double deltaSeconds) {
-    // ── fire cooldown ───────────────────────────────────────────────────────
+    // ── fire cooldown ──────────────────────────────────────────────────────
     if (_fireCooldown > 0.0) _fireCooldown -= deltaSeconds;
 
-    // ── rotation (joystick X) ───────────────────────────────────────────────
-    if (_input.x.abs() > 0.05) {
-      _yaw += _input.x * _rotateSpeed * deltaSeconds;
+    // ── merge joystick + keyboard into composite input ─────────────────────
+    double inputX = _joystickInput.x;
+    double inputY = _joystickInput.y; // +1 = thrust forward
+
+    if (_keyLeft) inputX = (inputX - 1.0).clamp(-1.0, 1.0);
+    if (_keyRight) inputX = (inputX + 1.0).clamp(-1.0, 1.0);
+    if (_keyUp) inputY = (inputY + 1.0).clamp(-1.0, 1.0);
+    if (_keyDown) inputY = (inputY - 1.0).clamp(-1.0, 1.0);
+
+    // ── rotation ───────────────────────────────────────────────────────────
+    if (inputX.abs() > 0.05) {
+      _yaw += inputX * _rotateSpeed * deltaSeconds;
     }
 
-    // ── thrust (joystick Y, +Y = forward on stick = -Y in screen coords) ───
-    if (_input.y.abs() > 0.05) {
-      // Joystick Y: pushing up (+1) should thrust forward
-      final thrust = forward * (-_input.y * _thrustForce * deltaSeconds);
+    // ── thrust (joystick Y: +1 = forward) ─────────────────────────────────
+    // No negation here — joystick widget already inverts screen Y.
+    if (inputY.abs() > 0.05) {
+      final thrust = forward * (inputY * _thrustForce * deltaSeconds);
       velocity = velocity + thrust;
     }
 
-    // ── speed clamp ─────────────────────────────────────────────────────────
+    // ── speed clamp ────────────────────────────────────────────────────────
     if (velocity.length > _maxSpeed) {
       velocity = velocity.normalized() * _maxSpeed;
     }
 
-    // ── drag ────────────────────────────────────────────────────────────────
-    velocity = velocity * _drag;
+    // ── frame-rate-independent exponential drag ────────────────────────────
+    // pow(e, -damping * dt) gives the same effective drag at any frame rate.
+    final dragFactor = math.exp(-_dampingPerSecond * deltaSeconds);
+    velocity = velocity * dragFactor;
 
-    // ── position — assign whole value, NEVER mutate in place (trap #1) ─────
+    // ── position — assign whole value (never mutate in place) ─────────────
     final pos = node.globalTransform.getTranslation();
     node.position = pos + velocity * deltaSeconds;
 
-    // ── facing rotation — assign whole Quaternion ───────────────────────────
+    // ── facing rotation ────────────────────────────────────────────────────
     node.rotation = vm.Quaternion.axisAngle(vm.Vector3(0.0, 1.0, 0.0), _yaw);
 
-    // ── world boundary wrap ─────────────────────────────────────────────────
+    // ── wrap at field boundaries ───────────────────────────────────────────
     _wrapPosition();
   }
 
@@ -81,7 +119,6 @@ class ShipController extends Component {
     if (p.z < -bound) p = vm.Vector3(p.x, p.y, bound - 1.0);
     if (p.y > 20.0) p = vm.Vector3(p.x, 20.0, p.z);
     if (p.y < -20.0) p = vm.Vector3(p.x, -20.0, p.z);
-    // Assign whole value — correct pattern
     node.position = p;
   }
 }
