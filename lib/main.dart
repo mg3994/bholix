@@ -40,13 +40,32 @@ class _BootStrapState extends State<BootStrap> {
   }
 }
 
-class FirstScene extends StatelessWidget {
+class FirstScene extends StatefulWidget {
   const FirstScene({super.key});
 
   @override
+  State<FirstScene> createState() => _FirstSceneState();
+}
+
+class _FirstSceneState extends State<FirstScene> {
+  // Constructing a Scene starts loading the engine's shared resources.
+  final Scene scene = Scene();
+
+  @override
+  void initState() {
+    super.initState();
+
+    final mesh = Mesh(
+      CuboidGeometry(vm.Vector3(1, 1, 1), debugColors: true),
+      UnlitMaterial(),
+    );
+    scene.add(Node(mesh: mesh)..addComponent(SpinComponent(1.5)));
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SceneView.declarative(
-      // The camera orbits the origin once per second.
+    return SceneView(
+      scene,
       cameraBuilder: (elapsed) {
         final t = elapsed.inMicroseconds / 1e6;
         return PerspectiveCamera(
@@ -54,17 +73,6 @@ class FirstScene extends StatelessWidget {
           target: vm.Vector3(0, 0, 0),
         );
       },
-      children: [
-        SceneNode(
-          components: [SpinComponent(1.5)],
-          children: [
-            SceneMesh(
-              geometry: CuboidGeometry(vm.Vector3(1, 1, 1), debugColors: true),
-              material: UnlitMaterial(),
-            ),
-          ],
-        ),
-      ],
     );
   }
 }
