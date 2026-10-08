@@ -62,12 +62,12 @@ SignalBuilder(builder: (context) {
 
 ## Implementation Plan
 
-- [ ] 1. **Add dependencies to pubspec.yaml**
+- [x] 1. **Add dependencies to pubspec.yaml**
       Add `http: ^1.2.2`, `cached_network_image: ^3.4.1`, `geolocator: ^13.0.2`, `geocoding: ^3.0.0` under `dependencies:`. Run `flutter pub get`.
       Files: `pubspec.yaml`
       Verify: `flutter pub get` exits 0; no version conflicts.
 
-- [ ] 2. **Create lib/core/schema/schema_override.dart**
+- [x] 2. **Create lib/core/schema/schema_override.dart**
       `ResolvedId` class (blogId?, postId?, url? — all nullable String, const constructor).
       `SchemaOverride` utility class with:
       - `static ResolvedId resolveId(String base, String idValue)`: 4-case logic — (1) http/https prefix → `url`, (2) split('/') exactly 2 non-empty → `blogId+postId`, (3) base.contains('/') → `blogId=base.split('/')[0] + postId=idValue`, (4) else → `url`.
@@ -75,14 +75,14 @@ SignalBuilder(builder: (context) {
       Files: `lib/core/schema/schema_override.dart`
       Verify: `flutter analyze` — 0 errors.
 
-- [ ] 3. **Create lib/core/schema/schema_extractor.dart**
+- [x] 3. **Create lib/core/schema/schema_extractor.dart**
       Static helpers: `getLocalizedValue(dynamic val, Locale? locale)`, `getFirst(dynamic val)`.
       Extractors (each takes `Map<String,dynamic> schema`): `extractName`, `extractDescription`, `extractImage` (→`String?`), `extractImages` (→`List<String>`), `extractPrice` (→`double?`), `extractPriceCurrency`, `extractSku`, `extractBrand`, `extractVariants` (→`List<Map>`), `extractAddons`, `extractAreaServed` (→`List<Map>`), `extractSeller` (→`Map?`), `extractAdditionalProperties` (→`List<Map>`), `extractStockLevel` (→`String?`).
       Static `Locale? currentLocale` settable field.
       Files: `lib/core/schema/schema_extractor.dart`
       Verify: `flutter analyze` — 0 errors.
 
-- [ ] 4. **Create lib/core/schema/geo_filter.dart** (also defines `LocationData`)
+- [x] 4. **Create lib/core/schema/geo_filter.dart** (also defines `LocationData`)
       `LocationData` plain class: `lat, lon, pin, city, state, country` (all `String`); `const` constructor, `fromJson`, `toJson`, `copyWith`, `factory LocationData.empty()`.
       `GeoFilter.isServiceable(dynamic areaServed, LocationData location) → bool`:
       - null/empty → `true`.
@@ -96,13 +96,13 @@ SignalBuilder(builder: (context) {
       Files: `lib/core/schema/geo_filter.dart`
       Verify: `flutter analyze` — 0 errors.
 
-- [ ] 5. **Create lib/core/services/blogger_config.dart**
+- [x] 5. **Create lib/core/services/blogger_config.dart**
       `BloggerAuthMode` enum (`unauthenticated`, `authenticated`).
       `BloggerConfig`: `static const String blogId = String.fromEnvironment('BLOGGER_BLOG_ID', defaultValue: '1774904866501098696')`, `static BloggerAuthMode get currentAuthMode => BloggerAuthMode.unauthenticated` (TODO Firebase), `feedBaseUrl`, `v3BaseUrl` constants.
       Files: `lib/core/services/blogger_config.dart`
       Verify: `flutter analyze` — 0 errors.
 
-- [ ] 6. **Create lib/core/services/blogger_service.dart**
+- [x] 6. **Create lib/core/services/blogger_service.dart**
       Imports: `dart:convert`, `package:http/http.dart as http`, `schema_override.dart`, `blogger_config.dart`.
       `BloggerDataService` class with all methods (see FEAT-001 step 6 for full spec):
       - `static String decodeEntities(String text)` — 8 HTML entity replacements.
@@ -117,65 +117,65 @@ SignalBuilder(builder: (context) {
       Files: `lib/core/services/blogger_service.dart`
       Verify: `flutter analyze` — 0 errors.
 
-- [ ] 7. **Create lib/core/services/location_service.dart**
+- [x] 7. **Create lib/core/services/location_service.dart**
       Imports `geolocator`, `geocoding`, `path_provider`, `dart:convert`, `dart:io`.
       Import `LocationData` from `geo_filter.dart`.
       `LocationService` with `getCurrentLocation()`, `saveLocation(LocationData)`, `loadLocation() → Future<LocationData?>`, `searchLocation(String query) → Future<List<LocationData>>`.
       Files: `lib/core/services/location_service.dart`
       Verify: `flutter analyze` — 0 errors.
 
-- [ ] 8. **Create lib/core/services/search_query_builder.dart**
+- [x] 8. **Create lib/core/services/search_query_builder.dart**
       `SearchQueryBuilder.build({keywords, labels, location})` and `buildFeedUrl({blogId, labels, keywords, location, maxResults, startIndex})`.
       Label splitting: items containing `|` are split and each sub-item treated as a separate label. Labels without `label:` prefix are left as-is (Blogger's label path handles them, not the `q=` param — the `q=` param takes `label:X` terms).
       Files: `lib/core/services/search_query_builder.dart`
       Verify: `flutter analyze` — 0 errors.
 
-- [ ] 9. **Create lib/core/cart/cart_models.dart**
+- [x] 9. **Create lib/core/cart/cart_models.dart**
       `CartAddon` (name, price, qty; fromJson/toJson).
       `OrderItem` (postId, postUrl, name, imageUrl, price, priceCurrency, qty, variantId?, packageId?, addons; fromJson/toJson/copyWith).
       `CartOrder` (items, priceCurrency; fromJson/toJson; `double get totalPrice`; `factory CartOrder.empty()`).
       Files: `lib/core/cart/cart_models.dart`
       Verify: `flutter analyze` — 0 errors.
 
-- [ ] 10. **Create lib/core/cart/cart_repository.dart**
+- [x] 10. **Create lib/core/cart/cart_repository.dart**
        CRUD over `documentsDir/antinna_cart.json` using `CartOrder` JSON.
        Methods: `load`, `_save`, `addItem`, `removeItem`, `updateQty`, `clear`.
        Files: `lib/core/cart/cart_repository.dart`
        Verify: `flutter analyze` — 0 errors.
 
-- [ ] 11. **Create lib/core/wishlist/wishlist_repository.dart**
+- [x] 11. **Create lib/core/wishlist/wishlist_repository.dart**
        CRUD over `documentsDir/antinna_wishlist.json` as `List<String>` postIds.
        Methods: `_load`, `_save`, `add`, `remove`, `contains`.
        Files: `lib/core/wishlist/wishlist_repository.dart`
        Verify: `flutter analyze` — 0 errors.
 
-- [ ] 12. **Create lib/features/grid/grid_bloc.dart**
+- [x] 12. **Create lib/features/grid/grid_bloc.dart**
        `GridState` class (entries, isLoading, hasMore, labels, searchKeywords, location; copyWith).
        `GridBloc extends CubitSignal<GridState>` with `loadFeed()`, `loadMore()`, `setLabels()`, `setSearch()`, `setLocation()`.
        `loadFeed`/`loadMore` call `BloggerDataService().fetchFeed(...)` then filter with `GeoFilter.isServiceable`.
        Files: `lib/features/grid/grid_bloc.dart`
        Verify: `flutter analyze` — 0 errors.
 
-- [ ] 13. **Create lib/features/product/product_bloc.dart**
+- [x] 13. **Create lib/features/product/product_bloc.dart**
        `ProductState` class (schema?, isLoading, selectedVariant?, selectedPackage?, qty; copyWith).
        `ProductBloc extends CubitSignal<ProductState>` with `loadPost(postId)`, `loadPostFromUrl(url)`, `selectVariant`, `selectPackage`, `setQty`, `addToCart(CartRepository)`, `addToWishlist(WishlistRepository)`.
        Files: `lib/features/product/product_bloc.dart`
        Verify: `flutter analyze` — 0 errors.
 
-- [ ] 14. **Create lib/features/cart/cart_bloc.dart**
+- [x] 14. **Create lib/features/cart/cart_bloc.dart**
        `CartBloc extends CubitSignal<CartOrder>` (state is `CartOrder` directly).
        Constructor takes `CartRepository`. Methods: `loadCart`, `addItem`, `removeItem`, `updateQty`, `clearCart`.
        Files: `lib/features/cart/cart_bloc.dart`
        Verify: `flutter analyze` — 0 errors.
 
-- [ ] 15. **Create lib/features/location/location_bloc.dart**
+- [x] 15. **Create lib/features/location/location_bloc.dart**
        `LocationState` class (location?, isLoading; copyWith).
        `LocationBloc extends CubitSignal<LocationState>` with `loadSaved`, `requestGps`, `setManual`, `clear`.
        Constructor takes `LocationService`.
        Files: `lib/features/location/location_bloc.dart`
        Verify: `flutter analyze` — 0 errors.
 
-- [ ] 16. **Create product sub-widgets** (all 6 files, same pattern)
+- [x] 16. **Create product sub-widgets** (all 6 files, same pattern)
        Each is a small `StatelessWidget` or `StatefulWidget`:
        - `lib/features/product/widgets/stock_badge.dart` — `StockBadge(String? availability)` → green/red Chip.
        - `lib/features/product/widgets/image_carousel.dart` — `ImageCarousel(List<String> imageUrls)` → PageView + CachedNetworkImage + dot indicator.
@@ -186,20 +186,20 @@ SignalBuilder(builder: (context) {
        Files: 6 files as listed above.
        Verify: `flutter analyze` — 0 errors.
 
-- [ ] 17. **Create lib/features/search/search_bar_widget.dart**
+- [x] 17. **Create lib/features/search/search_bar_widget.dart**
        `SearchBarWidget({required void Function(List<String> keywords, List<String> labels) onSearch})`.
        Parse `|` in input to split into multiple labels. Extract `label:X` terms as labels. Active label chips with delete. Dark/cyan theme consistent.
        Files: `lib/features/search/search_bar_widget.dart`
        Verify: `flutter analyze` — 0 errors.
 
-- [ ] 18. **Create lib/features/grid/grid_card.dart**
+- [x] 18. **Create lib/features/grid/grid_card.dart**
        `GridCard({required Map<String,dynamic> schema, required VoidCallback onTap})`.
        CachedNetworkImage thumbnail, name, price+currency, StockBadge, first areaServed chip.
        Tapping calls `onTap` (caller provides navigation).
        Files: `lib/features/grid/grid_card.dart`
        Verify: `flutter analyze` — 0 errors.
 
-- [ ] 19. **Create lib/features/grid/grid_page.dart**
+- [x] 19. **Create lib/features/grid/grid_page.dart**
        `GridPage` StatefulWidget. Creates `GridBloc` and `LocationBloc` in `initState`. Calls `bloc.loadFeed()` on init.
        AppBar: title `SearchBarWidget`, actions: location chip button → `appRouterConfig.router.push(const LocationPickerRoute())`.
        Body: `SignalBuilder` over `bloc.state` → `GridView.builder(crossAxisCount: 2, ...)` with `GridCard` entries.
@@ -208,7 +208,7 @@ SignalBuilder(builder: (context) {
        Files: `lib/features/grid/grid_page.dart`
        Verify: `flutter analyze` — 0 errors.
 
-- [ ] 20. **Create lib/features/product/product_page.dart**
+- [x] 20. **Create lib/features/product/product_page.dart**
        `ProductPage({required String postUrl})` StatefulWidget. Creates `ProductBloc`, `CartRepository`, `WishlistRepository` in `initState`. Calls `bloc.loadPostFromUrl(postUrl)`.
        Layout: CustomScrollView with SliverAppBar containing ImageCarousel, SliverList with: name, description, price row + StockBadge, VariantSelector, AddonSection, SellerCard, SpecsSection.
        Bottom bar: qty stepper + 'Add to Cart' + 'Add to Wishlist'.
@@ -216,7 +216,7 @@ SignalBuilder(builder: (context) {
        Files: `lib/features/product/product_page.dart`
        Verify: `flutter analyze` — 0 errors.
 
-- [ ] 21. **Create cart sheet/page and location picker sheet/page**
+- [x] 21. **Create cart sheet/page and location picker sheet/page**
        `lib/features/cart/cart_item_tile.dart` — ListTile with image, name, price, qty stepper, delete.
        `lib/features/cart/cart_sheet.dart` — Column/ListView of CartItemTile, total bar, Checkout stub, Clear Cart. Accepts `CartBloc` param.
        `lib/features/cart/cart_page.dart` — Scaffold wrapping `CartSheet`, creates `CartBloc(CartRepository())` in `initState`, calls `bloc.loadCart()`.
@@ -225,14 +225,14 @@ SignalBuilder(builder: (context) {
        Files: 5 files as listed.
        Verify: `flutter analyze` — 0 errors.
 
-- [ ] 22. **Fill in lib/routing/app_router.dart**
+- [x] 22. **Fill in lib/routing/app_router.dart**
        Add 4 route classes (`HomeRoute`, `PostRoute`, `CartRoute`, `LocationPickerRoute`) above the existing `appRouterConfig` declaration.
        Fill `initial: const HomeRoute()` and the exhaustive switch builder mapping all 4 routes to their page widgets.
        Import the 4 page files.
        Files: `lib/routing/app_router.dart`
        Verify: `flutter analyze` — 0 errors.
 
-- [ ] 23. **Add Android permissions to AndroidManifest.xml**
+- [x] 23. **Add Android permissions to AndroidManifest.xml**
        Insert before `<application`:
        ```xml
        <uses-permission android:name="android.permission.INTERNET"/>
@@ -242,7 +242,7 @@ SignalBuilder(builder: (context) {
        Files: `android/app/src/main/AndroidManifest.xml`
        Verify: `flutter build apk --debug` — exits 0.
 
-- [ ] 24. **Full build verification**
+- [x] 24. **Full build verification**
        Run `flutter analyze` and `flutter build apk --debug`.
        Fix any remaining type errors, missing imports, or exhaustiveness warnings.
        Files: any files with remaining errors.

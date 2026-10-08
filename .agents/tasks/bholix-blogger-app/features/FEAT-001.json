@@ -2,7 +2,7 @@
   "id": "FEAT-001",
   "type": "feat",
   "description": "Core infrastructure: add http + cached_network_image to pubspec, implement SchemaExtractor, BloggerDataService, LocationService, CartModels, CartManager, and ProductState. These are pure-logic or lightly-Flutter layers with no routing or feature UI — FEAT-002 and FEAT-003 both depend on them.",
-  "status": "pending",
+  "status": "completed",
   "steps": [
     "Step 1 — Add packages to pubspec.yaml. Under `dependencies:` add exactly two lines: `http: ^1.2.2` and `cached_network_image: ^3.4.1`. Run `flutter pub get` from c:\\Users\\manis\\Desktop\\apps\\bholix. No other packages.",
 

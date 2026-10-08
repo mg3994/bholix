@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:ui' show Locale;
 
 /// Static helpers to extract well-known Schema.org fields from a JSON-LD map.
@@ -47,6 +48,161 @@ class SchemaExtractor {
   static dynamic getFirst(dynamic val) {
     if (val is List) return val.isEmpty ? null : val.first;
     return val;
+  }
+
+  /// Returns val as a List if it is already a List, else [val] or [] if null.
+  static List<dynamic> getArray(dynamic val) {
+    if (val == null) return [];
+    if (val is List) return val;
+    return [val];
+  }
+
+  /// Normalises a string: trimmed and lowercased.
+  static String normalizeName(String name) => name.trim().toLowerCase();
+
+  /// Extracts JSON-LD map from an HTML string containing a `<script type="application/ld+json">` tag.
+  static Map<String, dynamic>? extractJsonLd(String html) {
+    try {
+      final scriptRegex = RegExp(
+        r'<script[^>]+type=["' "'" r']application/ld\+json["' "'" r'][^>]*>([\s\S]*?)</script>',
+        caseSensitive: false,
+      );
+      final match = scriptRegex.firstMatch(html);
+      String raw = match != null ? match.group(1)! : html;
+      raw = raw
+          .replaceAll('&quot;', '"')
+          .replaceAll('&amp;', '&')
+          .replaceAll('&#39;', "'")
+          .replaceAll('&apos;', "'")
+          .replaceAll('&lt;', '<')
+          .replaceAll('&gt;', '>')
+          .trim();
+      return jsonDecode(raw) as Map<String, dynamic>?;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Finds the highest-scoring matching variant given selected attribute maps.
+  static Map<String, dynamic>? findMatchingVariant(
+    Map<dynamic, dynamic> parent,
+    Map<String, String> selectedAttrs, [
+    String? lastClickedAttr,
+  ]) {
+    final variants = getArray(parent['hasVariant']);
+    if (variants.isEmpty) return null;
+
+    Map<String, dynamic>? bestMatch;
+    int highestScore = -1;
+
+    for (final v in variants) {
+      if (v is! Map) continue;
+      final variantMap = v.cast<String, dynamic>();
+      final props = getArray(variantMap['additionalProperty']);
+      int score = 0;
+
+      for (final p in props) {
+        if (p is! Map) continue;
+        final name = (p['name'] as String?)?.trim();
+        final value = (p['value'] as String?)?.trim();
+        if (name != null && value != null && selectedAttrs[name] == value) {
+          score += (lastClickedAttr != null && name == lastClickedAttr) ? 2 : 1;
+        }
+      }
+
+      if (score > highestScore) {
+        highestScore = score;
+        bestMatch = variantMap;
+      }
+    }
+
+    return bestMatch;
+  }
+
+  /// Extracts availability string from an offer or map.
+  static String extractAvailability(dynamic offer) {
+    if (offer is Map) {
+      return (offer['availability'] as String?) ?? '';
+    }
+    return '';
+  }
+
+  /// Extracts eligibleQuantity bounds ({'minValue': int, 'maxValue': int}).
+  static Map<String, dynamic> extractEligibleQuantity(Map<dynamic, dynamic> data) {
+    final eq = data['eligibleQuantity'];
+    if (eq is Map) {
+      return {
+        'minValue': (eq['minValue'] as num?)?.toInt() ?? 1,
+        'maxValue': (eq['maxValue'] as num?)?.toInt() ?? 99,
+      };
+    }
+    return {'minValue': 1, 'maxValue': 99};
+  }
+
+  /// Extracts inventoryLevel value.
+  static int? extractInventoryLevel(Map<dynamic, dynamic> data) {
+    final il = data['inventoryLevel'];
+    if (il is Map) {
+      final val = il['value'];
+      if (val is num) return val.toInt();
+    }
+    return null;
+  }
+
+  /// Recursively walks an object and collects all maps whose @type contains 'Service'.
+  static List<Map<String, dynamic>> findAllServices(dynamic obj) {
+    final results = <Map<String, dynamic>>[];
+
+    void walk(dynamic current) {
+      if (current is List) {
+        for (final item in current) {
+          walk(item);
+        }
+      } else if (current is Map) {
+        final currentMap = current.cast<String, dynamic>();
+        final type = currentMap['@type'];
+        if (type != null && type.toString().contains('Service')) {
+          results.add(currentMap);
+        }
+        if (currentMap.containsKey('hasOfferCatalog')) {
+          walk(currentMap['hasOfferCatalog']);
+        }
+        if (currentMap.containsKey('addOn')) {
+          walk(currentMap['addOn']);
+        }
+        if (currentMap.containsKey('itemListElement')) {
+          walk(currentMap['itemListElement']);
+        }
+      }
+    }
+
+    walk(obj);
+    return results;
+  }
+
+  /// Finds a service package in `hasOfferCatalog` matching `packageName`.
+  static Map<String, dynamic>? findMatchingServicePackage(
+    Map<dynamic, dynamic> parent,
+    String packageName,
+  ) {
+    final normTarget = normalizeName(packageName);
+    final catalogs = getArray(parent['hasOfferCatalog']);
+    for (final cat in catalogs) {
+      if (cat is! Map) continue;
+      final elements = getArray(cat['itemListElement']);
+      for (final el in elements) {
+        if (el is! Map) continue;
+        final name = el['name'] as String?;
+        if (name != null && normalizeName(name) == normTarget) {
+          return el.cast<String, dynamic>();
+        }
+      }
+      final catName = cat['name'] as String?;
+      if (catName != null && normalizeName(catName) == normTarget) {
+        return cat.cast<String, dynamic>();
+      }
+    }
+    return null;
   }
 
   // ── Field extractors ────────────────────────────────────────────────────────

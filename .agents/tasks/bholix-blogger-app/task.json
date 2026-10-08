@@ -1,7 +1,7 @@
 {
   "task_id": "task-bholix-blogger-app",
   "task_description": "Convert the Antinna TypeScript Blogger JSON-LD engine into a Flutter app named Bholix. Implements schema extraction from Blogger post HTML, a feed grid, product detail page with variants/addons, cart management, and location picker — all wired through kaisel typed routing and signals_core reactive state.",
-  "status": "in_progress",
+  "status": "completed",
   "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
   "blocked_reason": null
 }

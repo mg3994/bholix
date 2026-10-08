@@ -1,7 +1,7 @@
 {
   "task_id": "task-bholix-schema-engine",
   "task_description": "Implement the Bholix Flutter app core schema engine (Blogger JSON-LD fetch/parse/resolve/merge), data layer (location, cart, wishlist, search), feature BLoCs (grid, product, cart, location), full UI scaffolding (GridPage, ProductPage, CartSheet, LocationPicker, SearchBar), and wire routing — all grounded in kaisel sealed-route + CubitSignal patterns already in the project.",
-  "status": "pending",
+  "status": "completed",
   "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004"],
   "blocked_reason": null
 }

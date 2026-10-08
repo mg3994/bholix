@@ -2,7 +2,7 @@
   "id": "FEAT-002",
   "type": "feat",
   "description": "Routing completion and cart sheet UI. Replaces the skeleton app_router.dart with a fully working kaisel typed router (HomeRoute, PostRoute, CartRoute), fixes lib/main.dart's dispose method stub, and implements the CartSheet full-page and CartItemTile — so the app has a navigable skeleton before FEAT-003 adds the heavy feature pages. Depends on FEAT-001 (CartManager, CartOrder, CartAddon, CartItem must exist).",
-  "status": "pending",
+  "status": "completed",
   "steps": [
     "Step 1 — Fix lib/main.dart dispose method. The existing `_BootStrapState.dispose` has a compile error (`errors.c` is incomplete). Replace the dispose body with: `widget.errors.close(); super.dispose();`. Import nothing new — BootstrapErrorReporter.close() already exists.",
 
