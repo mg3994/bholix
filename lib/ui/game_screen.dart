@@ -68,9 +68,11 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (isDown) _heldKeys.add(key);
     if (isUp) _heldKeys.remove(key);
 
-    // Escape / P → toggle pause
+    // Escape / P / Pause / Menu → toggle pause
     if (isDown &&
-        (key == LogicalKeyboardKey.escape || key == LogicalKeyboardKey.keyP)) {
+        (key == LogicalKeyboardKey.escape ||
+            key == LogicalKeyboardKey.keyP ||
+            key == LogicalKeyboardKey.gameButtonSelect)) {
       _game.togglePause();
       return KeyEventResult.handled;
     }

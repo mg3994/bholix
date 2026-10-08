@@ -50,12 +50,12 @@ class _JoystickWidgetState extends State<JoystickWidget> {
   @override
   Widget build(BuildContext context) {
     final s = widget.size;
-    return GestureDetector(
+    return Listener(
       behavior: HitTestBehavior.opaque,
-      onPanStart: (d) => _updateThumb(d.localPosition),
-      onPanUpdate: (d) => _updateThumb(d.localPosition),
-      onPanEnd: (_) => _reset(),
-      onPanCancel: () => _reset(),
+      onPointerDown: (e) => _updateThumb(e.localPosition),
+      onPointerMove: (e) => _updateThumb(e.localPosition),
+      onPointerUp: (_) => _reset(),
+      onPointerCancel: (_) => _reset(),
       child: SizedBox(
         width: s,
         height: s,
