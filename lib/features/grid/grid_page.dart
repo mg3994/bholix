@@ -2,8 +2,10 @@ import 'package:bloc_signals_flutter/bloc_signals_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:kaisel/kaisel.dart';
 
+import '../../core/cart/cart_provider.dart';
 import '../../core/services/location_service.dart';
 import '../../routing/app_router.dart';
+import '../cart/cart_bloc.dart';
 import '../location/location_bloc.dart';
 import '../search/search_bar_widget.dart';
 import 'grid_bloc.dart';
@@ -34,10 +36,17 @@ class _GridPageState extends State<GridPage> {
   Future<void> _loadInitial() async {
     await _locationBloc.loadSaved();
     final loc = _locationBloc.stateValue.location;
-    if (loc != null) {
-      _gridBloc.setLocation(loc);
-    }
+    if (loc != null) _gridBloc.setLocation(loc);
     await _gridBloc.loadFeed();
+  }
+
+  Future<void> _openLocationPicker(BuildContext context) async {
+    await context.push(const LocationPickerRoute());
+    // After returning, reload saved location and refresh feed.
+    await _locationBloc.loadSaved();
+    final loc = _locationBloc.stateValue.location;
+    _gridBloc.setLocation(loc);
+    _gridBloc.loadFeed();
   }
 
   void _onScroll() {
@@ -64,26 +73,32 @@ class _GridPageState extends State<GridPage> {
 
   @override
   Widget build(BuildContext context) {
+    final cartBloc = CartProvider.of(context);
     return BlocSignalBuilder<GridBloc, GridState>(
       bloc: _gridBloc,
       builder: (ctx, gridState) {
         return BlocSignalBuilder<LocationBloc, LocationState>(
           bloc: _locationBloc,
           builder: (ctx, locState) {
-            return Scaffold(
-              backgroundColor: const Color(0xFF0f0f0f),
-              appBar: _GridAppBar(
-                locState: locState,
-                onSearch: _onSearch,
-                onLocationTap: () => context.push(const LocationPickerRoute()),
-                cartCount: 0,
-                onCartTap: () => context.push(const CartRoute()),
-              ),
-              body: _GridBody(
-                state: gridState,
-                scrollController: _scrollController,
-                onCardTap: (url) => context.push(PostRoute(postUrl: url)),
-              ),
+            return BlocSignalBuilder<CartBloc, CartOrder>(
+              bloc: cartBloc,
+              builder: (ctx, cartOrder) {
+                return Scaffold(
+                  backgroundColor: const Color(0xFF0f0f0f),
+                  appBar: _GridAppBar(
+                    locState: locState,
+                    onSearch: _onSearch,
+                    onLocationTap: () => _openLocationPicker(context),
+                    cartCount: cartOrder.items.fold(0, (s, i) => s + i.qty),
+                    onCartTap: () => context.push(const CartRoute()),
+                  ),
+                  body: _GridBody(
+                    state: gridState,
+                    scrollController: _scrollController,
+                    onCardTap: (url) => context.push(PostRoute(postUrl: url)),
+                  ),
+                );
+              },
             );
           },
         );

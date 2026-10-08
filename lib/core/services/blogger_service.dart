@@ -312,11 +312,17 @@ class BloggerDataService {
         final schema = extractJsonLd(content);
         if (schema == null) continue;
 
-        // Embed meta fields useful for the UI layer.
-        if (postId != null) schema['_postId'] = postId;
-        if (alternateUrl != null) schema['_alternateUrl'] = alternateUrl;
+        // Resolve @id references recursively (uses base = blogId/postId).
+        final base = (postId != null)
+            ? '${BloggerConfig.blogId}/$postId'
+            : BloggerConfig.blogId;
+        final resolved = await resolveAndLoadSchema(schema, base: base);
 
-        result.add(schema);
+        // Embed meta fields useful for the UI layer.
+        if (postId != null) resolved['_postId'] = postId;
+        if (alternateUrl != null) resolved['_alternateUrl'] = alternateUrl;
+
+        result.add(resolved);
       }
 
       return result;

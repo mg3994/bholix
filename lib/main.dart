@@ -4,6 +4,7 @@ import 'package:bholix/l10n/app_localizations.dart';
 import 'package:flutter/foundation.dart' show PlatformDispatcher;
 import 'package:flutter/material.dart';
 
+import 'core/cart/cart_provider.dart';
 import 'core/errors/reporter_impl.dart' show BootstrapErrorReporter;
 import 'routing/app_router.dart';
 
@@ -42,17 +43,19 @@ class _BootStrapState extends State<BootStrap> {
   Widget build(BuildContext context) {
     // MaterialApp.router — kaisel supplies the RouterConfig.
     // No string-path routes, no codegen, fully typed sealed-class stack.
-    return MaterialApp.router(
-      debugShowCheckedModeBanner: false,
-      routerConfig: appRouterConfig,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      theme: ThemeData.dark().copyWith(
-        //  move it to seprate file and ina  good way
-        scaffoldBackgroundColor: Colors.black,
-        colorScheme: const ColorScheme.dark(
-          primary: Colors.cyanAccent,
-          secondary: Colors.cyanAccent,
+    return CartProviderRoot(
+      child: MaterialApp.router(
+        debugShowCheckedModeBanner: false,
+        routerConfig: appRouterConfig,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: ThemeData.dark().copyWith(
+          //  move it to seprate file and ina  good way
+          scaffoldBackgroundColor: Colors.black,
+          colorScheme: const ColorScheme.dark(
+            primary: Colors.cyanAccent,
+            secondary: Colors.cyanAccent,
+          ),
         ),
       ),
     );

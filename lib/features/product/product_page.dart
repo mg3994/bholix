@@ -1,6 +1,7 @@
 import 'package:bloc_signals_flutter/bloc_signals_flutter.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/cart/cart_provider.dart';
 import '../../core/cart/cart_repository.dart';
 import '../../core/schema/schema_extractor.dart';
 import '../../core/wishlist/wishlist_repository.dart';
@@ -341,6 +342,7 @@ class _ActionButtons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final postId = (schema['_postId'] as String?) ?? postUrl;
+    final cartBloc = CartProvider.of(context);
     return Row(
       children: [
         Expanded(
@@ -354,7 +356,20 @@ class _ActionButtons extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            onPressed: () => bloc.addToCart(CartRepository(), postUrl),
+            onPressed: () async {
+              await bloc.addToCart(CartRepository(), postUrl);
+              // Reload shared cart so badge updates.
+              await cartBloc.loadCart();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Added to cart'),
+                    backgroundColor: Colors.green,
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
           ),
         ),
         const SizedBox(width: 10),
@@ -369,7 +384,18 @@ class _ActionButtons extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            onPressed: () => bloc.addToWishlist(WishlistRepository(), postId),
+            onPressed: () async {
+              await bloc.addToWishlist(WishlistRepository(), postId);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Added to wishlist'),
+                    backgroundColor: Color(0xFF1a1a1a),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
           ),
         ),
       ],
