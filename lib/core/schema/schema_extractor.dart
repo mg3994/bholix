@@ -135,7 +135,8 @@ class SchemaExtractor {
 
   /// Extracts `hasVariant` as a list of maps.
   static List<Map<String, dynamic>> extractVariants(
-      Map<String, dynamic> schema) {
+    Map<String, dynamic> schema,
+  ) {
     final raw = schema['hasVariant'];
     if (raw == null) return [];
     final items = raw is List ? raw : [raw];
@@ -150,10 +151,32 @@ class SchemaExtractor {
     return items.whereType<Map<String, dynamic>>().toList();
   }
 
+  /// Extracts service packages from `hasOfferCatalog[].itemListElement[]`.
+  /// Returns a flat list of offer maps, each with at minimum `name` and `price`.
+  static List<Map<String, dynamic>> extractPackages(
+    Map<String, dynamic> schema,
+  ) {
+    final raw = schema['hasOfferCatalog'];
+    if (raw == null) return [];
+    final catalogs = raw is List ? raw : [raw];
+    final result = <Map<String, dynamic>>[];
+    for (final catalog in catalogs) {
+      if (catalog is! Map<String, dynamic>) continue;
+      final elements = catalog['itemListElement'];
+      if (elements == null) continue;
+      final items = elements is List ? elements : [elements];
+      for (final item in items) {
+        if (item is Map<String, dynamic>) result.add(item);
+      }
+    }
+    return result;
+  }
+
   /// Extracts `areaServed` normalised to a list of maps.
   /// Strings are wrapped as `{'@type': 'PostalCode', 'postalCode': value}`.
   static List<Map<String, dynamic>> extractAreaServed(
-      Map<String, dynamic> schema) {
+    Map<String, dynamic> schema,
+  ) {
     final raw = schema['areaServed'];
     if (raw == null) return [];
 
@@ -179,7 +202,8 @@ class SchemaExtractor {
 
   /// Extracts `additionalProperty` as a list of maps.
   static List<Map<String, dynamic>> extractAdditionalProperties(
-      Map<String, dynamic> schema) {
+    Map<String, dynamic> schema,
+  ) {
     final raw = schema['additionalProperty'];
     if (raw == null) return [];
     final items = raw is List ? raw : [raw];

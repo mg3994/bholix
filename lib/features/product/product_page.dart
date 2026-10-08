@@ -8,6 +8,7 @@ import '../../core/wishlist/wishlist_repository.dart';
 import 'product_bloc.dart';
 import 'widgets/addon_section.dart';
 import 'widgets/image_carousel.dart';
+import 'widgets/package_selector.dart';
 import 'widgets/seller_card.dart';
 import 'widgets/specs_section.dart';
 import 'widgets/stock_badge.dart';
@@ -120,6 +121,7 @@ class _ProductBody extends StatelessWidget {
     final images = SchemaExtractor.extractImages(schema);
     final availability = SchemaExtractor.extractStockLevel(schema);
     final variants = SchemaExtractor.extractVariants(schema);
+    final packages = SchemaExtractor.extractPackages(schema);
     final addons = SchemaExtractor.extractAddons(schema);
     final seller = SchemaExtractor.extractSeller(schema);
     final properties = SchemaExtractor.extractAdditionalProperties(schema);
@@ -183,6 +185,15 @@ class _ProductBody extends StatelessWidget {
                       ),
                     );
                   }),
+                ],
+                // Package selector (hasOfferCatalog)
+                if (packages.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  PackageSelector(
+                    packages: packages,
+                    selected: state.selectedPackage,
+                    onSelect: bloc.selectPackage,
+                  ),
                 ],
                 // Add-ons
                 if (addons.isNotEmpty) ...[
