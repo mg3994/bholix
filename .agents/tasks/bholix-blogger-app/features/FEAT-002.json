@@ -1,0 +1,30 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Routing completion and cart sheet UI. Replaces the skeleton app_router.dart with a fully working kaisel typed router (HomeRoute, PostRoute, CartRoute), fixes lib/main.dart's dispose method stub, and implements the CartSheet full-page and CartItemTile — so the app has a navigable skeleton before FEAT-003 adds the heavy feature pages. Depends on FEAT-001 (CartManager, CartOrder, CartAddon, CartItem must exist).",
+  "status": "pending",
+  "steps": [
+    "Step 1 — Fix lib/main.dart dispose method. The existing `_BootStrapState.dispose` has a compile error (`errors.c` is incomplete). Replace the dispose body with: `widget.errors.close(); super.dispose();`. Import nothing new — BootstrapErrorReporter.close() already exists.",
+
+    "Step 2 — Replace lib/routing/app_router.dart entirely. The skeleton is broken (empty initial: and switch body). Write the complete file:\n```dart\nimport 'package:kaisel/kaisel.dart';\nimport '../features/grid/grid_page.dart';\nimport '../features/product/product_page.dart';\nimport '../features/cart/cart_sheet.dart';\n\nsealed class AppRoute extends KaiselRoute {\n  const AppRoute();\n}\n\nfinal class HomeRoute extends AppRoute {\n  const HomeRoute();\n}\n\nfinal class PostRoute extends AppRoute {\n  const PostRoute({required this.postUrl});\n  final String postUrl;\n  @override\n  List<Object?> get props => [postUrl];\n}\n\nfinal class CartRoute extends AppRoute {\n  const CartRoute();\n}\n\nfinal appRouterConfig = KaiselRouterConfig<AppRoute>(\n  initial: const HomeRoute(),\n  builder: (context, route) => switch (route) {\n    HomeRoute() => const GridPage(),\n    PostRoute(:final postUrl) => ProductPage(postUrl: postUrl),\n    CartRoute() => const CartSheet(),\n  },\n);\n```\nThis is a complete replacement — do not preserve any of the old skeleton.",
+
+    "Step 3 — Create lib/features/cart/cart_item_tile.dart. StatelessWidget `CartItemTile` with `final CartItem item` constructor param.\n  Layout: ListTile-like Row with:\n    • Left: 60×60 image — use CachedNetworkImage if item.imageUrl != null, else a grey Container.\n    • Middle (Expanded): Column with title text (style: bodyMedium), price text (style: bodySmall, color: cyanAccent), addon chip list (Wrap of small Chips for each addon name).\n    • Right: Column with quantity stepper (Row: IconButton minus, Text quantity, IconButton plus) calling CartManager.instance.updateQuantity, and an IconButton(Icons.delete_outline) calling CartManager.instance.removeItem.\n  Imports: package:flutter/material.dart, package:cached_network_image/cached_network_image.dart, ../../core/cart/cart_manager.dart, ../../core/cart/cart_models.dart.",
+
+    "Step 4 — Create lib/features/cart/cart_sheet.dart. StatelessWidget `CartSheet`.\n  Scaffold with:\n    • AppBar: title 'Cart', leading back button `context.router<AppRoute>().pop()`.\n    • Body: Watch cartSignal via `Watch` from signals_flutter (or use a StreamBuilder on cartSignal.toStream() — prefer direct: wrap build content in a `Builder` and read `CartManager.instance.cartSignal.value` reactively). Use a `Watch` widget from `package:signals_flutter/signals_flutter.dart` wrapping a Column:\n      - if order.items.isEmpty: Center(child: Text('Your cart is empty')).\n      - else: ListView.builder of CartItemTile.\n    • BottomNavigationBar replaced by a bottom Padding with total price Text and an ElevatedButton('Checkout') that shows a SnackBar 'Checkout not yet implemented'.\n  Imports: package:flutter/material.dart, package:kaisel/kaisel.dart, package:signals_flutter/signals_flutter.dart, ../../core/cart/cart_manager.dart, cart_item_tile.dart, ../../routing/app_router.dart.\n  NOTE: signals_flutter is a transitive dependency of bloc_signals_flutter — check pub cache for it. If Watch is not available, use a StatefulWidget that subscribes to cartSignal.subscribe((v) => setState((){})). Prefer the Watch approach if available.",
+
+    "Step 5 — Create stub files for all pages that FEAT-003 will fill, so the router compiles now:\n  • lib/features/grid/grid_page.dart — `import 'package:flutter/material.dart'; class GridPage extends StatelessWidget { const GridPage({super.key}); @override Widget build(BuildContext context) => const Scaffold(body: Center(child: Text('Grid — coming soon'))); }`\n  • lib/features/product/product_page.dart — `import 'package:flutter/material.dart'; class ProductPage extends StatelessWidget { final String postUrl; const ProductPage({super.key, required this.postUrl}); @override Widget build(BuildContext context) => Scaffold(body: Center(child: Text('Product: $postUrl'))); }`\n  These stubs will be overwritten by FEAT-003."
+  ],
+  "acceptance_criteria": [
+    "`flutter analyze` reports zero errors.",
+    "`flutter build apk --debug` exits 0 — the app is buildable end-to-end.",
+    "appRouterConfig has initial: const HomeRoute() and the switch handles all three route types.",
+    "CartSheet uses CartManager.instance.cartSignal reactively (not a one-time snapshot).",
+    "CartItemTile renders image, title, price, and quantity stepper."
+  ],
+  "verification": [
+    "cd c:\\Users\\manis\\Desktop\\apps\\bholix && flutter analyze",
+    "cd c:\\Users\\manis\\Desktop\\apps\\bholix && flutter build apk --debug"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

@@ -25,7 +25,7 @@ class Flavor implements FlavorInterface {
   String get baseUrl {
     const envUrl = String.fromEnvironment('SERVER_URL');
     if (envUrl.isNotEmpty) return envUrl;
-    if (_customUrl != null) return _customUrl;
+    if (_customUrl != null) return _customUrl; // for authonticate user we prefer V3 Blogger API else we just go with bloger feed api only
     return 'http://$localhost:8080';
   }
 

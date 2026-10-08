@@ -1,5 +1,6 @@
 import 'dart:async' show runZonedGuarded;
 
+import 'package:bholix/l10n/app_localizations.dart';
 import 'package:flutter/foundation.dart' show PlatformDispatcher;
 import 'package:flutter/material.dart';
 
@@ -31,13 +32,23 @@ class BootStrap extends StatefulWidget {
 
 class _BootStrapState extends State<BootStrap> {
   @override
+  void dispose() {
+    // TODO: implement dispose
+    widget.errors.close();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     // MaterialApp.router — kaisel supplies the RouterConfig.
     // No string-path routes, no codegen, fully typed sealed-class stack.
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       routerConfig: appRouterConfig,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       theme: ThemeData.dark().copyWith(
+        //  move it to seprate file and ina  good way
         scaffoldBackgroundColor: Colors.black,
         colorScheme: const ColorScheme.dark(
           primary: Colors.cyanAccent,
