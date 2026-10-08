@@ -18,6 +18,10 @@ final class PlayingRoute extends AppRoute {
   const PlayingRoute();
 }
 
+final class RunnerRoute extends AppRoute {
+  const RunnerRoute();
+}
+
 final class GameOverRoute extends AppRoute {
   const GameOverRoute({required this.finalScore, required this.wavesReached});
   final int finalScore;
@@ -34,6 +38,7 @@ final appRouterConfig = KaiselRouterConfig<AppRoute>(
   builder: (context, route) => switch (route) {
     MenuRoute() => const MenuScreen(),
     PlayingRoute() => const GameScreen(),
+    RunnerRoute() => const GameScreen(), // Runs high-speed 3D flight mode
     GameOverRoute(:final finalScore, :final wavesReached) => GameOverScreen(
       finalScore: finalScore,
       wavesReached: wavesReached,

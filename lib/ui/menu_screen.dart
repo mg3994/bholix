@@ -112,10 +112,20 @@ class MenuScreen extends StatelessWidget {
 
                 const Spacer(flex: 3),
 
-                // Launch Card / Button
-                _MenuButton(
-                  label: 'ENTER COMBAT ZONE',
-                  onTap: () => context.push(const PlayingRoute()),
+                // Game Selection Cards
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _MenuButton(
+                      label: 'ASTEROID MINER 3D',
+                      onTap: () => context.push(const PlayingRoute()),
+                    ),
+                    const SizedBox(width: 16.0),
+                    _MenuButton(
+                      label: 'SPACE SURFER 3D',
+                      onTap: () => context.push(const RunnerRoute()),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 28.0),
