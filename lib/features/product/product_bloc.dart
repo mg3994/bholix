@@ -110,7 +110,11 @@ class ProductBloc extends CubitSignal<ProductState> {
     emit(stateValue.copyWith(qty: qty));
   }
 
-  Future<void> addToCart(CartRepository repo, String postUrl) async {
+  Future<void> addToCart(
+    CartRepository repo,
+    String postUrl, {
+    List<CartAddon> addons = const [],
+  }) async {
     final schema = stateValue.schema;
     if (schema == null) return;
 
@@ -133,6 +137,7 @@ class ProductBloc extends CubitSignal<ProductState> {
         priceCurrency: currency,
         qty: stateValue.qty,
         variantId: variantId,
+        addons: addons,
       );
 
       await repo.addItem(item);

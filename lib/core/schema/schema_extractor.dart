@@ -142,12 +142,76 @@ class SchemaExtractor {
     return items.whereType<Map<String, dynamic>>().toList();
   }
 
-  /// Extracts `addOn` as a list of maps.
+  /// Normalizes a string name (trimmed and lowercased).
+  static String normalizeName(String name) => name.trim().toLowerCase();
+
+  /// Recursively walks [obj] collecting all service/addon maps.
+  static List<Map<String, dynamic>> findAllServices(dynamic obj) {
+    if (obj == null) return [];
+    final results = <Map<String, dynamic>>[];
+
+    if (obj is List) {
+      for (final item in obj) {
+        results.addAll(findAllServices(item));
+      }
+    } else if (obj is Map<String, dynamic>) {
+      final type = obj['@type'];
+      final typeStr = type is List ? type.join(' ') : (type?.toString() ?? '');
+
+      if (typeStr.contains('Service') ||
+          obj.containsKey('hasOfferCatalog') ||
+          obj.containsKey('addOn')) {
+        results.add(obj);
+      }
+
+      if (obj.containsKey('addOn')) {
+        results.addAll(findAllServices(obj['addOn']));
+      }
+      if (obj.containsKey('hasOfferCatalog')) {
+        results.addAll(findAllServices(obj['hasOfferCatalog']));
+      }
+      if (obj.containsKey('itemListElement')) {
+        results.addAll(findAllServices(obj['itemListElement']));
+      }
+      if (obj.containsKey('itemOffered')) {
+        results.addAll(findAllServices(obj['itemOffered']));
+      }
+    }
+    return results;
+  }
+
+  /// Finds a matching service or package in [parent] by [packageName].
+  static Map<String, dynamic>? findMatchingServicePackage(
+    Map<String, dynamic> parent,
+    String packageName,
+  ) {
+    final target = normalizeName(packageName);
+    final services = findAllServices(parent);
+
+    for (final s in services) {
+      final name = extractName(s);
+      if (name != null && normalizeName(name) == target) {
+        return s;
+      }
+    }
+    return null;
+  }
+
+  /// Extracts `addOn` as a list of maps (including nested services).
   static List<Map<String, dynamic>> extractAddons(Map<String, dynamic> schema) {
     final raw = schema['addOn'];
-    if (raw == null) return [];
-    final items = raw is List ? raw : [raw];
-    return items.whereType<Map<String, dynamic>>().toList();
+    final initialList = <Map<String, dynamic>>[];
+    if (raw != null) {
+      final items = raw is List ? raw : [raw];
+      initialList.addAll(items.whereType<Map<String, dynamic>>());
+    }
+
+    final catalog = schema['hasOfferCatalog'];
+    if (catalog != null) {
+      initialList.addAll(findAllServices(catalog));
+    }
+
+    return initialList;
   }
 
   /// Extracts `areaServed` normalised to a list of maps.

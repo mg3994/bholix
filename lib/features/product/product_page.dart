@@ -197,7 +197,12 @@ class _ProductBody extends StatelessWidget {
                 _QtyStepper(bloc: bloc, qty: state.qty),
                 // Action buttons
                 const SizedBox(height: 16),
-                _ActionButtons(bloc: bloc, postUrl: postUrl, schema: schema),
+                _ActionButtons(
+                  bloc: bloc,
+                  postUrl: postUrl,
+                  schema: schema,
+                  selectedAddons: selectedAddons,
+                ),
                 // Seller
                 if (seller != null) ...[
                   const SizedBox(height: 16),
@@ -331,16 +336,34 @@ class _ActionButtons extends StatelessWidget {
   final ProductBloc bloc;
   final String postUrl;
   final Map<String, dynamic> schema;
+  final Set<String> selectedAddons;
 
   const _ActionButtons({
     required this.bloc,
     required this.postUrl,
     required this.schema,
+    required this.selectedAddons,
   });
 
   @override
   Widget build(BuildContext context) {
     final postId = (schema['_postId'] as String?) ?? postUrl;
+    final allAddons = SchemaExtractor.extractAddons(schema);
+
+    final cartAddons = selectedAddons.map((addonName) {
+      final addonMap = allAddons.firstWhere(
+        (a) => (a['name']?.toString() ?? '') == addonName,
+        orElse: () => <String, dynamic>{},
+      );
+      final priceStr = _extractPrice(addonMap) ?? '0';
+      final price = double.tryParse(priceStr) ?? 0.0;
+      return CartAddon(
+        name: addonName,
+        price: price,
+        qty: 1,
+      );
+    }).toList();
+
     return Row(
       children: [
         Expanded(
@@ -354,7 +377,11 @@ class _ActionButtons extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            onPressed: () => bloc.addToCart(CartRepository(), postUrl),
+            onPressed: () => bloc.addToCart(
+              CartRepository(),
+              postUrl,
+              addons: cartAddons,
+            ),
           ),
         ),
         const SizedBox(width: 10),
@@ -374,5 +401,20 @@ class _ActionButtons extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  static String? _extractPrice(Map<String, dynamic> addonMap) {
+    if (addonMap.isEmpty) return null;
+    final offers = addonMap['offers'];
+    final offer = offers is List
+        ? (offers.isNotEmpty ? offers.first : null)
+        : offers;
+    if (offer is Map) {
+      final p = offer['price'];
+      if (p != null) return p.toString();
+    }
+    final p = addonMap['price'];
+    if (p != null) return p.toString();
+    return null;
   }
 }
