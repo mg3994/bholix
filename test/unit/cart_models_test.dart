@@ -73,5 +73,82 @@ void main() {
       expect(emptyOrder.totalPrice, 0.0);
       expect(emptyOrder.items, isEmpty);
     });
+
+    test('generateItemKey creates consistent deduplication key', () {
+      final key = OrderItem.generateItemKey(
+        url: 'https://demo.blogspot.com/2026/10/shoe.html?m=1',
+        type: 'Product',
+        sku: 'SHOE-01',
+        name: 'Running Shoe',
+        variants: {'size': '10', 'color': 'red'},
+      );
+
+      expect(
+        key,
+        'https://demo.blogspot.com/2026/10/shoe.html::Product::SHOE-01::Running Shoe::color:red|size:10',
+      );
+    });
+
+    test('getScaledAddonMax scales by parent quantity and inventory limits', () {
+      const parent = OrderItem(
+        postId: 'p1',
+        postUrl: 'https://example.com/p1',
+        name: 'Phone',
+        imageUrl: '',
+        price: 50000,
+        priceCurrency: 'INR',
+        qty: 3,
+      );
+
+      const addonWithMax = CartAddon(
+        name: 'Screen Guard',
+        price: 500,
+        qty: 1,
+        maxValue: 2, // max 2 per phone => max 6 for 3 phones
+        inventoryLevel: 5, // only 5 in stock
+      );
+
+      expect(parent.getScaledAddonMax(addonWithMax), 5); // clamped to inventoryLevel
+    });
+
+    test('CartOrder excludes unavailable and out of stock items from totalPrice', () {
+      final order = CartOrder(
+        items: [
+          const OrderItem(
+            postId: 'p1',
+            postUrl: '',
+            name: 'In Stock Item',
+            imageUrl: '',
+            price: 100,
+            priceCurrency: 'INR',
+            qty: 1,
+            availability: 'https://schema.org/InStock',
+          ),
+          const OrderItem(
+            postId: 'p2',
+            postUrl: '',
+            name: 'Out of Stock Item',
+            imageUrl: '',
+            price: 500,
+            priceCurrency: 'INR',
+            qty: 1,
+            availability: 'https://schema.org/OutOfStock',
+          ),
+          const OrderItem(
+            postId: 'p3',
+            postUrl: '',
+            name: 'Draft Item',
+            imageUrl: '',
+            price: 300,
+            priceCurrency: 'INR',
+            qty: 1,
+            isUnavailable: true,
+          ),
+        ],
+        priceCurrency: 'INR',
+      );
+
+      expect(order.totalPrice, 100.0);
+    });
   });
 }

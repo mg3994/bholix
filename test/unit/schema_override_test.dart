@@ -24,6 +24,14 @@ void main() {
       expect(res.url, isNull);
     });
 
+    test('resolves relative path or fragment against URL base', () {
+      final res = SchemaOverride.resolveId('https://example.com/posts/item', '#addon-1');
+      expect(res.url, 'https://example.com/posts/item#addon-1');
+
+      final resPath = SchemaOverride.resolveId('https://example.com/posts/item', 'relative-service');
+      expect(resPath.url, 'https://example.com/posts/relative-service');
+    });
+
     test('falls back to URL when other conditions are not met', () {
       final res = SchemaOverride.resolveId('', 'fragment-id');
       expect(res.url, 'fragment-id');
@@ -49,6 +57,34 @@ void main() {
       expect(merged['b'], {'c': 2, 'd': 4, 'f': 5});
       expect(merged['e'], 'source');
       expect(merged['g'], 10);
+    });
+  });
+
+  group('SchemaOverride extraction (@base and @language)', () {
+    test('extractBase from root and context', () {
+      final schemaRoot = {'@base': 'https://example.com/base/'};
+      expect(SchemaOverride.extractBase(schemaRoot), 'https://example.com/base/');
+
+      final schemaContext = {
+        '@context': {'@base': 'https://example.org/ctx/'}
+      };
+      expect(SchemaOverride.extractBase(schemaContext), 'https://example.org/ctx/');
+
+      final schemaNone = {'@type': 'Product'};
+      expect(SchemaOverride.extractBase(schemaNone), isNull);
+    });
+
+    test('extractDefaultLanguage from root and context', () {
+      final schemaRoot = {'@language': 'es'};
+      expect(SchemaOverride.extractDefaultLanguage(schemaRoot), 'es');
+
+      final schemaContext = {
+        '@context': {'@language': 'fr'}
+      };
+      expect(SchemaOverride.extractDefaultLanguage(schemaContext), 'fr');
+
+      final schemaNone = {'@type': 'Product'};
+      expect(SchemaOverride.extractDefaultLanguage(schemaNone), isNull);
     });
   });
 }

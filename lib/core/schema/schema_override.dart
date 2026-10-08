@@ -45,14 +45,24 @@ class SchemaOverride {
     }
 
     // 3. Relative ID against a base "blogId/postId" context.
-    if (base.contains('/')) {
+    if (base.contains('/') &&
+        !base.startsWith('http://') &&
+        !base.startsWith('https://')) {
       final baseParts = base.split('/');
       if (baseParts[0].isNotEmpty) {
         return ResolvedId(blogId: baseParts[0], postId: idValue);
       }
     }
 
-    // 4. Fallback.
+    // 4. Relative ID against a base absolute URL.
+    if (base.startsWith('http://') || base.startsWith('https://')) {
+      final baseUri = Uri.tryParse(base);
+      if (baseUri != null) {
+        return ResolvedId(url: baseUri.resolve(idValue).toString());
+      }
+    }
+
+    // 5. Fallback.
     return ResolvedId(url: idValue);
   }
 
@@ -77,5 +87,33 @@ class SchemaOverride {
     }
 
     return output;
+  }
+
+  /// Extracts `@base` from schema map or its `@context`.
+  static String? extractBase(Map<String, dynamic> schema) {
+    if (schema.containsKey('@base') && schema['@base'] is String) {
+      return schema['@base'] as String;
+    }
+    final ctx = schema['@context'];
+    if (ctx is Map<String, dynamic>) {
+      if (ctx.containsKey('@base') && ctx['@base'] is String) {
+        return ctx['@base'] as String;
+      }
+    }
+    return null;
+  }
+
+  /// Extracts default `@language` from schema map or its `@context`.
+  static String? extractDefaultLanguage(Map<String, dynamic> schema) {
+    if (schema.containsKey('@language') && schema['@language'] is String) {
+      return schema['@language'] as String;
+    }
+    final ctx = schema['@context'];
+    if (ctx is Map<String, dynamic>) {
+      if (ctx.containsKey('@language') && ctx['@language'] is String) {
+        return ctx['@language'] as String;
+      }
+    }
+    return null;
   }
 }

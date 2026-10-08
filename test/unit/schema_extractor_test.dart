@@ -199,6 +199,53 @@ void main() {
       expect(pkg, isNotNull);
       expect(pkg!['name'], 'SEO Audit');
     });
+
+    test('getLocalizedValue with single map object containing @language and @value', () {
+      final mapVal = {'@language': 'hi', '@value': 'नमस्ते'};
+      expect(SchemaExtractor.getLocalizedValue(mapVal, const Locale('hi')), 'नमस्ते');
+      expect(SchemaExtractor.getLocalizedValue(mapVal, const Locale('en')), 'नमस्ते');
+    });
+
+    test('getLocalizedValue with defaultLanguage parameter', () {
+      final localizedList = [
+        {'@language': 'fr', '@value': 'Bonjour'},
+        {'@language': 'de', '@value': 'Guten Tag'},
+      ];
+      expect(
+        SchemaExtractor.getLocalizedValue(localizedList, null, 'de'),
+        'Guten Tag',
+      );
+    });
+
+    test('extractAdvanceBookingRequirement', () {
+      final offerWithHours = {
+        'advanceBookingRequirement': {
+          'value': 24,
+          'unitCode': 'HUR',
+        },
+      };
+      expect(
+        SchemaExtractor.extractAdvanceBookingRequirement(offerWithHours),
+        '24 Hours',
+      );
+
+      final offerWithDays = {
+        'advanceBookingRequirement': {
+          'value': 2,
+          'unitCode': 'DAY',
+        },
+      };
+      expect(
+        SchemaExtractor.extractAdvanceBookingRequirement(offerWithDays),
+        '2 Days',
+      );
+
+      expect(
+        SchemaExtractor.extractAdvanceBookingRequirement({'advanceBookingRequirement': '48 hours'}),
+        '48 hours',
+      );
+    });
   });
 }
+
 

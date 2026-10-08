@@ -11,35 +11,52 @@ class SchemaExtractor {
   /// Returns a localized string from a multilingual value node.
   ///
   /// - [String] → returned as-is.
-  /// - [List]   → find entry whose '@language' matches [locale.languageCode],
-  ///              falling back to the first plain string in the list.
-  /// - [Map]    → return `val['@value']` as String.
-  static String? getLocalizedValue(dynamic val, Locale? locale) {
+  /// - [List]   → find entry whose '@language' matches [locale.languageCode] or [defaultLanguage],
+  ///              falling back to the first plain string or @value in the list.
+  /// - [Map]    → return matching `@value` for [locale] or [defaultLanguage] if specified, or `@value`.
+  static String? getLocalizedValue(dynamic val, Locale? locale, [String? defaultLanguage]) {
     if (val == null) return null;
     if (val is String) return val;
 
+    final targetLang = locale?.languageCode.toLowerCase() ?? defaultLanguage?.toLowerCase();
+
     if (val is List) {
-      // Try locale match first.
-      if (locale != null) {
+      // 1. Try matching preferred language or default language.
+      if (targetLang != null) {
         for (final item in val) {
           if (item is Map &&
-              item['@language'] == locale.languageCode &&
+              item['@language'] != null &&
+              item['@language'].toString().toLowerCase() == targetLang &&
               item['@value'] != null) {
-            return item['@value'] as String?;
+            return item['@value']?.toString();
           }
         }
       }
-      // Fallback: first plain string or first @value in list.
+      // 2. Fallback: first plain string or first @value in list.
       for (final item in val) {
         if (item is String) return item;
         if (item is Map && item['@value'] != null) {
-          return item['@value'] as String?;
+          return item['@value']?.toString();
         }
       }
       return null;
     }
 
-    if (val is Map) return val['@value'] as String?;
+    if (val is Map) {
+      if (val.containsKey('@value')) {
+        if (targetLang != null && val.containsKey('@language')) {
+          final lang = val['@language']?.toString().toLowerCase();
+          if (lang != null && lang != targetLang) {
+            // Still fallback to @value if only one is present
+            return val['@value']?.toString();
+          }
+        }
+        return val['@value']?.toString();
+      }
+      if (val.containsKey('name')) {
+        return getLocalizedValue(val['name'], locale, defaultLanguage);
+      }
+    }
 
     return null;
   }
@@ -248,27 +265,64 @@ class SchemaExtractor {
     return result;
   }
 
-  /// Extracts the price from `offers.price` or top-level `price`.
+  /// Extracts the price from `offers.price`, `itemOffered.offers.price`,
+  /// `priceSpecification`, or top-level `price`.
   static String? extractPrice(Map<String, dynamic> schema) {
+    final directPrice = schema['price'];
+    if (directPrice != null) return directPrice.toString();
+
     final offers = getFirst(schema['offers']);
     if (offers is Map) {
       final price = offers['price'];
       if (price != null) return price.toString();
+
+      final priceSpec = getFirst(offers['priceSpecification']);
+      if (priceSpec is Map && priceSpec['price'] != null) {
+        return priceSpec['price'].toString();
+      }
     }
-    final price = schema['price'];
-    if (price != null) return price.toString();
+
+    final itemOffered = getFirst(schema['itemOffered']);
+    if (itemOffered is Map) {
+      final itemOffers = getFirst(itemOffered['offers']);
+      if (itemOffers is Map && itemOffers['price'] != null) {
+        return itemOffers['price'].toString();
+      }
+    }
+
+    final priceSpec = getFirst(schema['priceSpecification']);
+    if (priceSpec is Map && priceSpec['price'] != null) {
+      return priceSpec['price'].toString();
+    }
+
     return null;
   }
 
-  /// Extracts the price currency from `offers.priceCurrency` or top-level.
+  /// Extracts the price currency from `offers.priceCurrency`, `itemOffered.offers`,
+  /// `priceSpecification`, or top-level.
   static String? extractPriceCurrency(Map<String, dynamic> schema) {
+    final direct = schema['priceCurrency'];
+    if (direct is String) return direct;
+
     final offers = getFirst(schema['offers']);
     if (offers is Map) {
       final currency = offers['priceCurrency'];
       if (currency is String) return currency;
+
+      final priceSpec = getFirst(offers['priceSpecification']);
+      if (priceSpec is Map && priceSpec['priceCurrency'] is String) {
+        return priceSpec['priceCurrency'] as String;
+      }
     }
-    final currency = schema['priceCurrency'];
-    if (currency is String) return currency;
+
+    final itemOffered = getFirst(schema['itemOffered']);
+    if (itemOffered is Map) {
+      final itemOffers = getFirst(itemOffered['offers']);
+      if (itemOffers is Map && itemOffers['priceCurrency'] is String) {
+        return itemOffers['priceCurrency'] as String;
+      }
+    }
+
     return null;
   }
 
@@ -375,6 +429,32 @@ class SchemaExtractor {
     }
     final avail = schema['availability'];
     if (avail is String) return avail;
+    return null;
+  }
+
+  /// Extracts advance booking requirement (e.g. "24 Hours" or "2 Days").
+  static String? extractAdvanceBookingRequirement(dynamic offer) {
+    final off = getFirst(offer);
+    if (off is! Map) return null;
+
+    final abr = getFirst(off['advanceBookingRequirement']);
+    if (abr == null) return null;
+    if (abr is String) return abr;
+
+    if (abr is Map) {
+      final val = getFirst(abr['value']);
+      final unit = getFirst(abr['unitCode']) ?? getFirst(abr['unitText']) ?? '';
+      if (val == null) return null;
+
+      var unitLabel = unit.toString();
+      if (unit == 'HUR') {
+        unitLabel = 'Hours';
+      } else if (unit == 'DAY') {
+        unitLabel = 'Days';
+      }
+
+      return '$val $unitLabel'.trim();
+    }
     return null;
   }
 }

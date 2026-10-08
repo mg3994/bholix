@@ -116,7 +116,10 @@ class BloggerDataService {
     // Work on a deep clone so we never mutate the caller's map.
     final resolved = jsonDecode(jsonEncode(schema)) as Map<String, dynamic>;
 
-    await _traverseAndResolve(resolved, base, visited);
+    // Extract @base from document or @context if present, falling back to base parameter
+    final documentBase = SchemaOverride.extractBase(resolved) ?? base;
+
+    await _traverseAndResolve(resolved, documentBase, visited);
     return resolved;
   }
 
@@ -217,10 +220,14 @@ class BloggerDataService {
       // Build a copy without @context.
       final node = Map<String, dynamic>.from(schema)..remove('@context');
 
-      // Deduplicate by @id; last definition wins.
+      // Deduplicate and deep-merge by @id.
       final id = node['@id'] as String?;
       if (id != null) {
-        deduped[id] = node;
+        if (deduped.containsKey(id)) {
+          deduped[id] = SchemaOverride.deepMerge(deduped[id]!, node);
+        } else {
+          deduped[id] = node;
+        }
       } else {
         // No @id — use insertion-order key to keep the node.
         deduped['_noId_${deduped.length}'] = node;
