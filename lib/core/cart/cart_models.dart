@@ -139,14 +139,17 @@ class CartOrder {
         'priceCurrency': priceCurrency,
       };
 
+  /// Per-item total price including add-ons multiplied by item quantity.
+  static double calcItemTotalPrice(OrderItem item) {
+    final addonsTotal = item.addons.fold(
+      0.0,
+      (s, a) => s + a.price * a.qty,
+    );
+    return (item.price + addonsTotal) * item.qty;
+  }
+
   /// Sum of (price + addons total) × qty for every item.
   double get totalPrice {
-    return items.fold(0.0, (sum, item) {
-      final addonsTotal = item.addons.fold(
-        0.0,
-        (s, a) => s + a.price * a.qty,
-      );
-      return sum + (item.price + addonsTotal) * item.qty;
-    });
+    return items.fold(0.0, (sum, item) => sum + calcItemTotalPrice(item));
   }
 }
