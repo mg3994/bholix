@@ -40,15 +40,6 @@ class HudOverlay extends StatelessWidget {
 
     return Stack(
       children: [
-        // ── Pause overlay — only shown when paused ────────────────────────
-        BlocSignalSelector<GameCubit, GameStateRecord, GamePhase>(
-          bloc: gameCubit,
-          selector: (s) => s.phase,
-          builder: (_, phase) => phase == GamePhase.paused
-              ? _PauseOverlay(onResume: onResume)
-              : const SizedBox.shrink(),
-        ),
-
         // ── Top Header Glass Bar ──────────────────────────────────────────
         Positioned(
           top: padding.top + 12.0,
@@ -192,36 +183,16 @@ class HudOverlay extends StatelessWidget {
               ),
         ),
 
-        // ── Pause button — top right below wave ───────────────────────────
-        Positioned(
-          top: padding.top + 38.0,
-          right: 20.0,
-          child: GestureDetector(
-            onTap: onPause,
-            child: Icon(
-              Icons.pause_circle_outline_rounded,
-              color: Colors.white.withValues(alpha: 0.35),
-              size: 22.0,
-            ),
-          ),
-        ),
-
         // ── Tactical Space Radar Mini-map — top left below header bar ────────
         if (asteroidField != null && shipPosition != null)
           Positioned(
             top: padding.top + 76.0,
             left: 20.0,
-            child: BlocSignalSelector<GameCubit, GameStateRecord, bool>(
-              bloc: gameCubit,
-              selector: (s) => s.isPlaying,
-              builder: (_, isPlaying) => isPlaying
-                  ? RadarWidget(
-                      shipPos: shipPosition!,
-                      shipYaw: 0.0,
-                      asteroidField: asteroidField!,
-                      radius: 42.0,
-                    )
-                  : const SizedBox.shrink(),
+            child: RadarWidget(
+              shipPos: shipPosition!,
+              shipYaw: 0.0,
+              asteroidField: asteroidField!,
+              radius: 42.0,
             ),
           ),
 
@@ -229,33 +200,20 @@ class HudOverlay extends StatelessWidget {
         Positioned(
           bottom: padding.bottom + 24.0,
           left: 24.0,
-          child: BlocSignalSelector<GameCubit, GameStateRecord, bool>(
-            bloc: gameCubit,
-            selector: (s) => s.isPlaying,
-            builder: (_, isPlaying) => isPlaying
-                ? JoystickWidget(direction: joystickDirection, size: 130.0)
-                : const SizedBox.shrink(),
-          ),
+          child: JoystickWidget(direction: joystickDirection, size: 130.0),
         ),
 
         // ── Fire button — bottom right ────────────────────────────────────
         Positioned(
           bottom: padding.bottom + 32.0,
           right: 32.0,
-          child: BlocSignalSelector<GameCubit, GameStateRecord, bool>(
-            bloc: gameCubit,
-            selector: (s) => s.isPlaying,
-            builder: (_, isPlaying) {
-              if (!isPlaying) return const SizedBox.shrink();
-              return ValueListenableBuilder<bool>(
-                valueListenable: firePressed,
-                builder: (context, pressed, child) => _FireButton(
-                  pressed: pressed,
-                  onTapDown: () => firePressed.value = true,
-                  onRelease: () => firePressed.value = false,
-                ),
-              );
-            },
+          child: ValueListenableBuilder<bool>(
+            valueListenable: firePressed,
+            builder: (context, pressed, child) => _FireButton(
+              pressed: pressed,
+              onTapDown: () => firePressed.value = true,
+              onRelease: () => firePressed.value = false,
+            ),
           ),
         ),
 
@@ -274,6 +232,15 @@ class HudOverlay extends StatelessWidget {
               ),
             ),
           ),
+        ),
+
+        // ── Pause overlay — placed at TOP OF STACK so it obscures controls ONLY when paused ─
+        BlocSignalSelector<GameCubit, GameStateRecord, GamePhase>(
+          bloc: gameCubit,
+          selector: (s) => s.phase,
+          builder: (_, phase) => phase == GamePhase.paused
+              ? _PauseOverlay(onResume: onResume)
+              : const SizedBox.shrink(),
         ),
       ],
     );
